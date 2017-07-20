@@ -1,5 +1,9 @@
 using MathOptInterfaceUtilities
+const MOIU = MathOptInterfaceUtilities
+
 using Base.Test
 
-# write your own tests here
-@test 1 == 2
+using MathOptInterface
+const MOI = MathOptInterface
+
+include("functions.jl")

@@ -1,5 +1,8 @@
 module MathOptInterfaceUtilities
 
-# package code goes here
+using MathOptInterface
+const MOI = MathOptInterface
+
+include("functions.jl")
 
 end # module
