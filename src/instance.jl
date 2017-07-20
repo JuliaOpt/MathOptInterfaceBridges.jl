@@ -30,6 +30,8 @@ const SVF = MOI.SingleVariable
 const VVF = MOI.VectorOfVariables
 const SAF{T} = MOI.ScalarAffineFunction{T}
 const VAF{T} = MOI.VectorAffineFunction{T}
+const SQF{T} = MOI.ScalarQuadraticFunction{T}
+const VQF{T} = MOI.VectorQuadraticFunction{T}
 
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:ZS}) = _getnoc(m.eq, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:NS}) = _getnoc(m.ge, noc)
@@ -84,14 +86,16 @@ mutable struct Instance{T}
     objective::SAF{T}
     sv::ScalarConstraints{T, SVF}
     sa::ScalarConstraints{T, SAF{T}}
+    sq::ScalarConstraints{T, SQF{T}}
     vv::VectorConstraints{VVF}
     va::VectorConstraints{VAF{T}}
+    vq::VectorConstraints{VQF{T}}
     nvars::UInt64
     nconstrs::UInt64
     constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
     function Instance{T}() where T
         new{T}(MOI.FeasibilitySense, SAF{T}(MOI.VariableReference[], T[], zero(T)),
-               ScalarConstraints{T, SVF}(), ScalarConstraints{T, SAF{T}}(), VectorConstraints{VVF}(), VectorConstraints{VAF{T}}(),
+               ScalarConstraints{T, SVF}(), ScalarConstraints{T, SAF{T}}(), ScalarConstraints{T, SQF{T}}(), VectorConstraints{VVF}(), VectorConstraints{VAF{T}}(), VectorConstraints{VQF{T}}(),
                0, 0, Int[])
     end
 end
@@ -170,7 +174,9 @@ for (fun, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, 
 
         $fun(m::Instance, cr::$T{<:SVF}, args...) = $fun(m.sv, cr, args...)
         $fun(m::Instance, cr::$T{<:SAF}, args...) = $fun(m.sa, cr, args...)
+        $fun(m::Instance, cr::$T{<:SQF}, args...) = $fun(m.sq, cr, args...)
         $fun(m::Instance, cr::$T{<:VVF}, args...) = $fun(m.vv, cr, args...)
         $fun(m::Instance, cr::$T{<:VAF}, args...) = $fun(m.va, cr, args...)
+        $fun(m::Instance, cr::$T{<:VQF}, args...) = $fun(m.vq, cr, args...)
     end
 end
