@@ -1,12 +1,23 @@
 @testset "Function modification" begin
     x = MOI.VariableReference(1)
     y = MOI.VariableReference(2)
+    @testset "Variablewise constraint copy" begin
+        f = MOI.SingleVariable(x)
+        g = deepcopy(f)
+        @test g.variable == x
+        v = [x]
+        h = deepcopy(MOI.VectorOfVariables([x]))
+        push!(v, y)
+        @test h.variables == [x]
+    end
     @testset "Scalar" begin
         @testset "Affine" begin
             f = MOI.ScalarAffineFunction([x, y], [2, 4], 5)
             f = MOIU.modifyfunction(f, MOI.ScalarConstantChange(6))
             @test f.constant == 6
+            g = deepcopy(f)
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(y, 3))
+            @test g.coefficients == [2, 4]
             @test f.variables == [x, y]
             @test f.coefficients == [2, 3]
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(x, 0))
@@ -20,7 +31,9 @@
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(y, 0))
             @test f.affine_variables == [x]
             @test f.affine_coefficients == [3]
+            g = deepcopy(f)
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(y, 2))
+            @test g.affine_variables == [x]
             @test f.affine_variables == [x, y]
             @test f.affine_coefficients == [3, 2]
         end
@@ -30,9 +43,11 @@
             f = MOI.VectorAffineFunction([1, 1, 2], [x, y, y], [2, 4, 3], [5, 7])
             f = MOIU.modifyfunction(f, MOI.VectorConstantChange([6, 8]))
             @test f.constant == [6, 8]
+            g = deepcopy(f)
             f = MOIU.modifyfunction(f, MOI.MultirowChange(y, [2], [9]))
             @test f.outputindex == [1, 1, 2]
             @test f.variables == [x, y, y]
+            @test g.coefficients == [2, 4, 3]
             @test f.coefficients == [2, 4, 9]
             f = MOIU.modifyfunction(f, MOI.MultirowChange(y, [1], [0]))
             @test f.outputindex == [1, 2]
@@ -47,9 +62,12 @@
             @test f.affine_outputindex == [1, 2, 1]
             @test f.affine_variables == [x, x, y]
             @test f.affine_coefficients == [3, 1, 1]
+            g = deepcopy(f)
             f = MOIU.modifyfunction(f, MOI.MultirowChange(x, [1, 3], [0, 4]))
             @test f.affine_outputindex == [2, 1, 3]
+            @test g.affine_variables == [x, x, y]
             @test f.affine_variables == [x, y, x]
+            @test g.affine_coefficients == [3, 1, 1]
             @test f.affine_coefficients == [1, 1, 4]
         end
     end

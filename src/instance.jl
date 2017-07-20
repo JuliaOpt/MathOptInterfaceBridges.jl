@@ -30,13 +30,6 @@ const PS = Union{MOI.LessThan, MOI.Nonpositives}
 const IL = MOI.Interval
 const DS = MOI.PositiveSemidefiniteConeTriangle
 
-const SVF = MOI.SingleVariable
-const VVF = MOI.VectorOfVariables
-const SAF{T} = MOI.ScalarAffineFunction{T}
-const VAF{T} = MOI.VectorAffineFunction{T}
-const SQF{T} = MOI.ScalarQuadraticFunction{T}
-const VQF{T} = MOI.VectorQuadraticFunction{T}
-
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:ZS}) = _getnoc(m.eq, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:NS}) = _getnoc(m.ge, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:PS}) = _getnoc(m.le, noc)
