@@ -5,7 +5,7 @@
 | [![Build Status][build-img]][build-url] [![Build Status][winbuild-img]][winbuild-url] |
 | [![Coveralls branch][coveralls-img]][coveralls-url] [![Codecov branch][codecov-img]][codecov-url] |
 
-Utilities for users of MathOptInterface and for implementations of MathOptInterface.
+Utilities for users of [MathOptInterface](https://github.com/JuliaOpt/MathOptInterface.jl) and for implementations of MathOptInterface.
 
 [build-img]: https://travis-ci.org/JuliaOpt/MathOptInterfaceUtilities.jl.svg?branch=master
 [build-url]: https://travis-ci.org/JuliaOpt/MathOptInterfaceUtilities.jl
