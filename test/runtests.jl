@@ -7,3 +7,4 @@ using MathOptInterface
 const MOI = MathOptInterface
 
 include("functions.jl")
+include("instance.jl")
