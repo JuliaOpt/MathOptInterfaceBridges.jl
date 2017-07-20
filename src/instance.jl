@@ -6,6 +6,7 @@ struct ScalarConstraints{T, F<:MOI.AbstractScalarFunction} <: Constraints{F}
     eq::Vector{C{F, MOI.EqualTo{T}}}
     ge::Vector{C{F, MOI.GreaterThan{T}}}
     le::Vector{C{F, MOI.LessThan{T}}}
+    il::Vector{C{F, MOI.Interval{T}}}
     # TODO add more sets
     function ScalarConstraints{T, F}() where {T, F}
         new{T, F}(C{F, MOI.EqualTo{T}}[], C{F, MOI.GreaterThan{T}}[], C{F, MOI.LessThan{T}}[])
@@ -26,6 +27,7 @@ end
 const ZS = Union{MOI.EqualTo, MOI.Zeros}
 const NS = Union{MOI.GreaterThan, MOI.Nonnegatives}
 const PS = Union{MOI.LessThan, MOI.Nonpositives}
+const IL = MOI.Interval
 const DS = MOI.PositiveSemidefiniteConeTriangle
 
 const SVF = MOI.SingleVariable
@@ -38,6 +40,7 @@ const VQF{T} = MOI.VectorQuadraticFunction{T}
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:ZS}) = _getnoc(m.eq, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:NS}) = _getnoc(m.ge, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:PS}) = _getnoc(m.le, noc)
+_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:IL}) = _getnoc(m.il, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:DS}) = _getnoc(m.sd, noc)
 
 function _addconstraint!{F, S}(constrs::Vector{C{F, S}}, cr::CR, f::F, s::S)
@@ -172,6 +175,7 @@ for (fun, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, 
         $fun{F}(m::Constraints, cr::$T{F, <:ZS}, args...) = $fun(m.eq, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:NS}, args...) = $fun(m.ge, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:PS}, args...) = $fun(m.le, cr, args...)
+        $fun{F}(m::Constraints, cr::$T{F, <:IL}, args...) = $fun(m.il, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:DS}, args...) = $fun(m.sd, cr, args...)
 
         $fun(m::Instance, cr::$T{<:SVF}, args...) = $fun(m.sv, cr, args...)
