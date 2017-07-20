@@ -1,23 +1,23 @@
 abstract type Constraints{F} end
 
 struct ScalarConstraints{T, F<:MOI.AbstractScalarFunction} <: Constraints{F}
-    eq::Vector{Tuple{CR, F, MOI.EqualTo{T}}}
-    ge::Vector{Tuple{CR, F, MOI.GreaterThan{T}}}
-    le::Vector{Tuple{CR, F, MOI.LessThan{T}}}
+    eq::Vector{Tuple{CR{F, MOI.EqualTo{T}}, F, MOI.EqualTo{T}}}
+    ge::Vector{Tuple{CR{F, MOI.GreaterThan{T}}, F, MOI.GreaterThan{T}}}
+    le::Vector{Tuple{CR{F, MOI.LessThan{T}}, F, MOI.LessThan{T}}}
     # TODO add more sets
     function ScalarConstraints{T, F}() where {T, F}
-        new{T, F}(Tuple{CR, F, MOI.EqualTo{T}}[], Tuple{CR, F, MOI.GreaterThan{T}}[], Tuple{CR, F, MOI.LessThan{T}}[])
+        new{T, F}(Tuple{CR{F, MOI.EqualTo{T}}, F, MOI.EqualTo{T}}[], Tuple{CR{F, MOI.GreaterThan{T}}, F, MOI.GreaterThan{T}}[], Tuple{CR{F, MOI.LessThan{T}}, F, MOI.LessThan{T}}[])
     end
 end
 
 struct VectorConstraints{F<:MOI.AbstractVectorFunction} <: Constraints{F}
-    eq::Vector{Tuple{F, MOI.Zeros}}
-    ge::Vector{Tuple{F, MOI.Nonnegatives}}
-    le::Vector{Tuple{F, MOI.Nonpositives}}
-    sd::Vector{Tuple{F, MOI.PositiveSemidefiniteConeTriangle}}
+    eq::Vector{Tuple{CR{F, MOI.Zeros}, F, MOI.Zeros}}
+    ge::Vector{Tuple{CR{F, MOI.Nonnegatives}, F, MOI.Nonnegatives}}
+    le::Vector{Tuple{CR{F, MOI.Nonpositives}, F, MOI.Nonpositives}}
+    sd::Vector{Tuple{CR{F, MOI.PositiveSemidefiniteConeTriangle}, F, MOI.PositiveSemidefiniteConeTriangle}}
     # TODO add more sets
     function VectorConstraints{F}() where F
-        new{F}(Tuple{CR, F, MOI.Zeros}[], Tuple{CR, F, MOI.Nonnegatives}[], Tuple{CR, F, MOI.Nonpositives}[], Tuple{CR, F, MOI.PositiveSemidefiniteConeTriangle}[])
+        new{F}(Tuple{CR{F, MOI.Zeros}, F, MOI.Zeros}[], Tuple{CR{F, MOI.Nonnegatives}, F, MOI.Nonnegatives}[], Tuple{CR{F, MOI.Nonpositives}, F, MOI.Nonpositives}[], Tuple{CR{F, MOI.PositiveSemidefiniteConeTriangle}, F, MOI.PositiveSemidefiniteConeTriangle}[])
     end
 end
 
@@ -36,7 +36,7 @@ _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:NS}) = _getnoc(m.g
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:PS}) = _getnoc(m.le, noc)
 _getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:DS}) = _getnoc(m.sd, noc)
 
-function _addconstraint!{F, S}(constrs::Vector{Tuple{CR, F, S}}, cr::CR, f::F, s::S)
+function _addconstraint!{F, S}(constrs::Vector{Tuple{CR{F, S}, F, S}}, cr::CR, f::F, s::S)
     push!(constrs, (cr, f, s))
     length(constrs)
 end
@@ -61,11 +61,11 @@ end
 _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::F) = (cr, change, s)
 _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::S) = (cr, f, change)
 _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::MOI.AbstractFunctionModification) = (cr, modifyfunction(f, change), s)
-function _modifyconstraint!{F, S}(constrs::Vector{Tuple{CR, F, S}}, cr::CR{F}, i::Int, change)
+function _modifyconstraint!{F, S}(constrs::Vector{Tuple{CR{F, S}, F, S}}, cr::CR{F}, i::Int, change)
     _modifyconstr(constrs[i]..., change)
 end
 
-function _getloc{F, S}(constrs::Vector{Tuple{CR, F, S}})::Vector{Tuple{MOI.AbstractFunction, MOI.AbstractSet}}
+function _getloc{F, S}(constrs::Vector{Tuple{CR{F, S}, F, S}})::Vector{Tuple{MOI.AbstractFunction, MOI.AbstractSet}}
     isempty(constrs) ? [] : [(F, S)]
 end
 
@@ -77,7 +77,7 @@ function _getloc(m::VectorConstraints)
 end
 
 # We define this function instead of doing length directly in the functions below to have MethodError in case of e.g. NOC{scalar function, vector set}
-_getnoc{F, S}(constrs::Vector{Tuple{CR, F, S}}, noc::MOI.NumberOfConstraints{F, S}) = length(constrs)
+_getnoc{F, S}(constrs::Vector{Tuple{CR{F, S}, F, S}}, noc::MOI.NumberOfConstraints{F, S}) = length(constrs)
 
 mutable struct Instance{T}
     sense::MOI.OptimizationSense
