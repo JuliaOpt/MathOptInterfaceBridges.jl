@@ -9,18 +9,24 @@ struct ScalarConstraints{T, F<:MOI.AbstractScalarFunction} <: Constraints{F}
     il::Vector{C{F, MOI.Interval{T}}}
     # TODO add more sets
     function ScalarConstraints{T, F}() where {T, F}
-        new{T, F}(C{F, MOI.EqualTo{T}}[], C{F, MOI.GreaterThan{T}}[], C{F, MOI.LessThan{T}}[])
+        new{T, F}(C{F, MOI.EqualTo{T}}[], C{F, MOI.GreaterThan{T}}[], C{F, MOI.LessThan{T}}[], C{F, MOI.Interval{T}}[])
     end
 end
+
+const SO = MOI.SecondOrderCone
+const RS = MOI.RotatedSecondOrderCone
+const DS = MOI.PositiveSemidefiniteConeTriangle
 
 struct VectorConstraints{F<:MOI.AbstractVectorFunction} <: Constraints{F}
     eq::Vector{C{F, MOI.Zeros}}
     ge::Vector{C{F, MOI.Nonnegatives}}
     le::Vector{C{F, MOI.Nonpositives}}
-    sd::Vector{C{F, MOI.PositiveSemidefiniteConeTriangle}}
+    so::Vector{C{F, SO}}
+    rs::Vector{C{F, RS}}
+    sd::Vector{C{F, DS}}
     # TODO add more sets
     function VectorConstraints{F}() where F
-        new{F}(C{F, MOI.Zeros}[], C{F, MOI.Nonnegatives}[], C{F, MOI.Nonpositives}[], C{F, MOI.PositiveSemidefiniteConeTriangle}[])
+        new{F}(C{F, MOI.Zeros}[], C{F, MOI.Nonnegatives}[], C{F, MOI.Nonpositives}[], C{F, SO}[], C{F, RS}[], C{F, DS}[])
     end
 end
 
@@ -28,13 +34,6 @@ const ZS = Union{MOI.EqualTo, MOI.Zeros}
 const NS = Union{MOI.GreaterThan, MOI.Nonnegatives}
 const PS = Union{MOI.LessThan, MOI.Nonpositives}
 const IL = MOI.Interval
-const DS = MOI.PositiveSemidefiniteConeTriangle
-
-_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:ZS}) = _getnoc(m.eq, noc)
-_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:NS}) = _getnoc(m.ge, noc)
-_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:PS}) = _getnoc(m.le, noc)
-_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:IL}) = _getnoc(m.il, noc)
-_getnoc(m::Constraints, noc::MOI.NumberOfConstraints{<:Any, <:DS}) = _getnoc(m.sd, noc)
 
 function _addconstraint!{F, S}(constrs::Vector{C{F, S}}, cr::CR, f::F, s::S)
     push!(constrs, (cr, f, s))
@@ -62,18 +61,18 @@ _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::F) = (cr, change, s)
 _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::S) = (cr, f, change)
 _modifyconstr{F, S}(cr::CR{F, S}, f::F, s::S, change::MOI.AbstractFunctionModification) = (cr, modifyfunction(f, change), s)
 function _modifyconstraint!{F, S}(constrs::Vector{C{F, S}}, cr::CR{F}, i::Int, change)
-    _modifyconstr(constrs[i]..., change)
+    constrs[i] = _modifyconstr(constrs[i]..., change)
 end
 
-function _getloc{F, S}(constrs::Vector{C{F, S}})::Vector{Tuple{MOI.AbstractFunction, MOI.AbstractSet}}
+function _getloc{F, S}(constrs::Vector{C{F, S}})::Vector{Tuple{DataType, DataType}}
     isempty(constrs) ? [] : [(F, S)]
 end
 
 function _getloc(m::ScalarConstraints)
-    [_getnoc(m.eq); _getnoc(m.ge); _plist(m.le)]
+    [_getloc(m.eq); _getloc(m.ge); _getloc(m.le); _getloc(m.il)]
 end
 function _getloc(m::VectorConstraints)
-    [_getnoc(m.eq); _getnoc(m.ge); _plist(m.le); _dlist(m.sd)]
+    [_getloc(m.eq); _getloc(m.ge); _getloc(m.le); _getloc(m.so); _getloc(m.rs); _getloc(m.sd)]
 end
 
 # We define this function instead of doing length directly in the functions below to have MethodError in case of e.g. NOC{scalar function, vector set}
@@ -139,7 +138,7 @@ function MOI.modifyconstraint!(m::Instance, cr::CR, change)
 end
 
 function MOI.getattribute(m::Instance, loc::MOI.ListOfConstraints)
-    [_getloc(m.sv, loc); _getloc(m.sa, loc); _getloc(m.vv, loc); _getloc(m.va, loc)]
+    [_getloc(m.sv); _getloc(m.sa); _getloc(m.sq); _getloc(m.vv); _getloc(m.va); _getloc(m.vq)]
 end
 
 MOI.getattribute(m::Instance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
@@ -169,6 +168,8 @@ for (fun, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, 
         $fun{F}(m::Constraints, cr::$T{F, <:NS}, args...) = $fun(m.ge, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:PS}, args...) = $fun(m.le, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:IL}, args...) = $fun(m.il, cr, args...)
+        $fun{F}(m::Constraints, cr::$T{F, <:SO}, args...) = $fun(m.so, cr, args...)
+        $fun{F}(m::Constraints, cr::$T{F, <:RS}, args...) = $fun(m.rs, cr, args...)
         $fun{F}(m::Constraints, cr::$T{F, <:DS}, args...) = $fun(m.sd, cr, args...)
 
         $fun(m::Instance, cr::$T{<:SVF}, args...) = $fun(m.sv, cr, args...)
