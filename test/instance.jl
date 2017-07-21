@@ -1,3 +1,5 @@
+MOIU.@instance Instance (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle)
+
 # Taken from MOI/test/contlinear.jl
 @testset "Basic solve, query, resolve" begin
     # simple 2 variable, 1 constraint problem
@@ -5,7 +7,7 @@
     # st   x + y <= 1   (x + y - 1 ∈ Nonpositives)
     #       x, y >= 0   (x, y ∈ Nonnegatives)
 
-    m = MOIU.Instance{Float64}()
+    m = Instance{Float64}()
 
     v = MOI.addvariables!(m, 2)
     @test MOI.getattribute(m, MOI.NumberOfVariables()) == 2
@@ -121,7 +123,7 @@ end
 
 @testset "Quadratic functions" begin
 
-    m = MOIU.Instance{Int}()
+    m = Instance{Int}()
 
     x, y = MOI.addvariables!(m, 2)
     @test MOI.getattribute(m, MOI.NumberOfVariables()) == 2
