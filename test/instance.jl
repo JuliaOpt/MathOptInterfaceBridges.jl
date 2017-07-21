@@ -63,8 +63,11 @@ MOIU.@instance(Instance,
     # x,y,z >= 0
 
     z = MOI.addvariable!(m)
-    v = [v; z]
+    push!(v, z)
     @test v[3] == z
+    @test cf.variables == v
+    @test MOI.getattribute(m, MOI.ConstraintFunction(), c).variables == [v[1], v[2]]
+    @test MOI.getattribute(m, MOI.ObjectiveFunction()).variables == [v[1], v[2]]
 
     vc3 = MOI.addconstraint!(m, MOI.SingleVariable(v[3]), MOI.GreaterThan(0.0))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 3

@@ -55,7 +55,8 @@ MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
 
 function MOI.setobjective!(m::AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
     m.sense = sense
-    m.objective = f
+    # f needs to be copied, see #2
+    m.objective = deepcopy(f)
 end
 
 function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionModification)
@@ -65,7 +66,8 @@ end
 # Constraints
 function MOI.addconstraint!{F, S}(m::AbstractInstance, f::F, s::S)
     cr = CR{F, S}(m.nconstrs += 1)
-    push!(m.constrmap, _addconstraint!(m, cr, f, s))
+    # f needs to be copied, see #2
+    push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), s))
     cr
 end
 
