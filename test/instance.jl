@@ -167,4 +167,9 @@ end
     @test (MOI.VectorOfVariables,MOI.RotatedSecondOrderCone) in loc
     @test (MOI.VectorAffineFunction{Int},MOI.SecondOrderCone) in loc
 
+    MOI.delete!(m, c4)
+
+    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 1
+    @test MOI.getattribute(m, MOI.ConstraintFunction(), c6).constant == f6.constant
+
 end

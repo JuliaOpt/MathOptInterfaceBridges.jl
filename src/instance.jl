@@ -127,8 +127,8 @@ function MOI.addconstraint!{F, S}(m::Instance, f::F, s::S)
 end
 
 function MOI.delete!(m::Instance, cr::CR)
-    for (ci, _, _) in _delete!(m, cr, getconstrloc(m, cr))
-        m.constrmap[ci] -= 1
+    for (cr_next, _, _) in _delete!(m, cr, getconstrloc(m, cr))
+        m.constrmap[cr_next.value] -= 1
     end
     m.constrmap[cr.value] = 0
 end
