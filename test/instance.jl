@@ -1,4 +1,8 @@
-MOIU.@instance Instance (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle)
+MOIU.@instance(Instance,
+               (), # <- example of giving no set
+               (EqualTo, GreaterThan, LessThan, Interval),
+               (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle, PositiveSemidefiniteConeScaled),
+               (PowerCone,)) # <- example of giving only one set
 
 # Taken from MOI/test/contlinear.jl
 @testset "Basic solve, query, resolve" begin
