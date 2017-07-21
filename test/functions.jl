@@ -16,7 +16,9 @@
             f = MOIU.modifyfunction(f, MOI.ScalarConstantChange(6))
             @test f.constant == 6
             g = deepcopy(f)
+            @test isapprox(g, f)
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(y, 3))
+            @test !isapprox(g, f)
             @test g.coefficients == [2, 4]
             @test f.variables == [x, y]
             @test f.coefficients == [2, 3]
@@ -32,7 +34,9 @@
             @test f.affine_variables == [x]
             @test f.affine_coefficients == [3]
             g = deepcopy(f)
+            @test isapprox(f, g)
             f = MOIU.modifyfunction(f, MOI.ScalarCoefficientChange(y, 2))
+            @test !isapprox(f, g)
             @test g.affine_variables == [x]
             @test f.affine_variables == [x, y]
             @test f.affine_coefficients == [3, 2]
