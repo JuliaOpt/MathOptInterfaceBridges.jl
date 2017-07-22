@@ -67,7 +67,7 @@ end
 function MOI.addconstraint!{F, S}(m::AbstractInstance, f::F, s::S)
     cr = CR{F, S}(m.nconstrs += 1)
     # f needs to be copied, see #2
-    push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), s))
+    push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), deepcopy(s)))
     cr
 end
 
