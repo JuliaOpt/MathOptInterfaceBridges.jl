@@ -122,10 +122,11 @@ MOIU.@instance(Instance,
     # x,y >= 0, z = 0
 
     cf2 = MOI.ScalarAffineFunction(v, [1.0, -1.0, 0.0], 0.0)
-    c2 = MOI.addconstraint!(m, cf, MOI.GreaterThan(0.0))
+    c2 = MOI.addconstraint!(m, cf2, MOI.GreaterThan(0.0))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.EqualTo{Float64}}()) == 1
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.GreaterThan{Float64}}()) == 1
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.LessThan{Float64}}()) == 0
+    @test MOI.getattribute(m, MOI.ConstraintFunction(), c2) ≈ cf2
 end
 
 @testset "Quadratic functions" begin
