@@ -11,6 +11,7 @@ const SQF{T} = MOI.ScalarQuadraticFunction{T}
 const VQF{T} = MOI.VectorQuadraticFunction{T}
 
 include("functions.jl")
+include("sets.jl")
 
 const CR = MOI.ConstraintReference
 
