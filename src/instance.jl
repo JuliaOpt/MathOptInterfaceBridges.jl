@@ -104,7 +104,13 @@ end
 # Macro to generate Instance
 abstract type Constraints{F} end
 
-struct SymbolSet
+abstract type SymbolFS end
+struct SymbolFun <: SymbolFS
+    s::Symbol
+    typed::Bool
+    cname::Symbol
+end
+struct SymbolSet <: SymbolFS
     s::Symbol
     typed::Bool
 end
@@ -116,8 +122,9 @@ end
 # Expr(:., MOI, :($(QuoteNode(s)))) is Expr(:., MOI, :(:EqualTo)) <- what we want
 _mod(m, s::Symbol) = Expr(:., m, :($(QuoteNode(s))))
 _set(s::SymbolSet) = _mod(MOI, s.s)
+_fun(s::SymbolFun) = _mod(MOI, s.s)
 
-_field(s::SymbolSet) = Symbol(lowercase(string(s.s)))
+_field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
 
 function _getC(s::SymbolSet)
     if s.typed
@@ -126,73 +133,89 @@ function _getC(s::SymbolSet)
         :(MOIU.C{F, $(_set(s))})
     end
 end
+function _getC(s::SymbolFun)
+    if s.typed
+        :($(_fun(s)){T})
+    else
+        _fun(s)
+    end
+end
+
 
 _getCV(s::SymbolSet) = :($(_getC(s))[])
+_getCV(s::SymbolFun) = :($(s.cname){T, $(_getC(s))}())
 
-_getlocfield(s::SymbolSet) = :(MOIU._getloc(m.$(_field(s))))
+_getlocfield(s::SymbolFS) = :(MOIU._getloc(m.$(_field(s))))
 
 """
-    macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets)
+    macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets, scalarfunctions, vectorfunctions)
 
-Creates a type Instance implementing the MOI instance interface and containing `scalarsets` scalar sets `typedscalarsets` typed scalar sets, `vectorsets` vector sets and `typedvectorsets` typed vector sets.
-To give no set, write `()`, to give one set `S`, write `(S,)`.
+Creates a type Instance implementing the MOI instance interface and containing `scalarsets` scalar sets `typedscalarsets` typed scalar sets, `vectorsets` vector sets, `typedvectorsets` typed vector sets, `scalarfunctions` scalar functions and `vectorfunctions` vector functions.
+To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 
 ### Examples
 
 The instance describing an linear program would be:
 ```
-@instance Instance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) ()
+@instance Instance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable, ScalarAffineFunction) (VectorOfVariables, VectorAffineFunction)
 ```
 """
-macro instance(instancename, ss, sst, vs, vst)
+macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     scalarsets = [SymbolSet.(ss.args, false); SymbolSet.(sst.args, true)]
     vectorsets = [SymbolSet.(vs.args, false); SymbolSet.(vst.args, true)]
 
     scname = Symbol(string(instancename) * "ScalarConstraints")
     vcname = Symbol(string(instancename) * "VectorConstraints")
 
+    scalarfuns = [SymbolFun.(sf.args, false, scname); SymbolFun.(sft.args, true, scname)]
+    vectorfuns = [SymbolFun.(vf.args, false, vcname); SymbolFun.(vft.args, true, vcname)]
+    funs = [scalarfuns; vectorfuns]
+
     scalarconstraints = :(struct $scname{T, F<:MOI.AbstractScalarFunction} <: MOIU.Constraints{F}; end)
-    for s in scalarsets
-        set = _set(s)
-        field = _field(s)
-        push!(scalarconstraints.args[3].args, :($field::Vector{$(_getC(s))}))
+    vectorconstraints = :(struct $vcname{T, F<:MOI.AbstractVectorFunction} <: MOIU.Constraints{F}; end)
+    for (c, ss) in ((scalarconstraints, scalarsets), (vectorconstraints, vectorsets))
+        for s in ss
+            field = _field(s)
+            push!(c.args[3].args, :($field::Vector{$(_getC(s))}))
+        end
     end
 
-    vectorconstraints = :(struct $vcname{T, F<:MOI.AbstractVectorFunction} <: MOIU.Constraints{F}; end)
-    for s in vectorsets
-        set = _set(s)
-        field = _field(s)
-        push!(vectorconstraints.args[3].args, :($field::Vector{$(_getC(s))}))
+    instancedef = quote
+        mutable struct $instancename{T} <: MOIU.AbstractInstance{T}
+            sense::MOI.OptimizationSense
+            objective::MOIU.SAF{T}
+            nvars::UInt64
+            nconstrs::UInt64
+            constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
+        end
+    end
+    for f in funs
+        cname = f.cname
+        field = _field(f)
+        push!(instancedef.args[2].args[3].args, :($field::$cname{T, $(_getC(f))}))
     end
 
     code = :()
-    for (f, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, CR), (:_getfunction, CR), (:_getset, CR), (:_getnoc, MOI.NumberOfConstraints))
-        fun = _mod(MOIU, f)
-        for s in scalarsets
-            set = _set(s)
-            field = _field(s)
-            code = quote
-                $code
-                $fun{F}(m::$scname, cr::$T{F, <:$set}, args...) = $fun(m.$field, cr, args...)
-            end
-        end
-        for s in vectorsets
-            set = _set(s)
-            field = _field(s)
-            code = quote
-                $code
-                $fun{F}(m::$vcname, cr::$T{F, <:$set}, args...) = $fun(m.$field, cr, args...)
+    for (func, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, CR), (:_getfunction, CR), (:_getset, CR), (:_getnoc, MOI.NumberOfConstraints))
+        funct = _mod(MOIU, func)
+        for (c, ss) in ((scname, scalarsets), (vcname, vectorsets))
+            for s in ss
+                set = _set(s)
+                field = _field(s)
+                code = quote
+                    $code
+                    $funct{F}(m::$c, cr::$T{F, <:$set}, args...) = $funct(m.$field, cr, args...)
+                end
             end
         end
 
-        code = quote
-            $code
-            $fun(m::$instancename, cr::$T{<:MOIU.SVF}, args...) = $fun(m.sv, cr, args...)
-            $fun(m::$instancename, cr::$T{<:MOIU.SAF}, args...) = $fun(m.sa, cr, args...)
-            $fun(m::$instancename, cr::$T{<:MOIU.SQF}, args...) = $fun(m.sq, cr, args...)
-            $fun(m::$instancename, cr::$T{<:MOIU.VVF}, args...) = $fun(m.vv, cr, args...)
-            $fun(m::$instancename, cr::$T{<:MOIU.VAF}, args...) = $fun(m.va, cr, args...)
-            $fun(m::$instancename, cr::$T{<:MOIU.VQF}, args...) = $fun(m.vq, cr, args...)
+        for f in funs
+            fun = _fun(f)
+            field = _field(f)
+            code = quote
+                $code
+                $funct(m::$instancename, cr::$T{<:$fun}, args...) = $funct(m.$field, cr, args...)
+            end
         end
     end
 
@@ -214,27 +237,15 @@ macro instance(instancename, ss, sst, vs, vst)
             vcat($(_getlocfield.(vectorsets)...))
         end
 
-        mutable struct $instancename{T} <: MOIU.AbstractInstance{T}
-            sense::MOI.OptimizationSense
-            objective::MOIU.SAF{T}
-            sv::$scname{T, MOIU.SVF}
-            sa::$scname{T, MOIU.SAF{T}}
-            sq::$scname{T, MOIU.SQF{T}}
-            vv::$vcname{T, MOIU.VVF}
-            va::$vcname{T, MOIU.VAF{T}}
-            vq::$vcname{T, MOIU.VQF{T}}
-            nvars::UInt64
-            nconstrs::UInt64
-            constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
-        end
+        $instancedef
         function $instancename{T}() where T
             $instancename{T}(MOI.FeasibilitySense, MOIU.SAF{T}(MOI.VariableReference[], T[], zero(T)),
-                   $scname{T, MOIU.SVF}(), $scname{T, MOIU.SAF{T}}(), $scname{T, MOIU.SQF{T}}(), $vcname{T, MOIU.VVF}(), $vcname{T, MOIU.VAF{T}}(), $vcname{T, MOIU.VQF{T}}(),
-                   0, 0, Int[])
+                   0, 0, Int[],
+                   $(_getCV.(funs)...))
         end
 
         function MOI.getattribute(m::$instancename, loc::MOI.ListOfConstraints)
-            [MOIU._getloc(m.sv); MOIU._getloc(m.sa); MOIU._getloc(m.sq); MOIU._getloc(m.vv); MOIU._getloc(m.va); MOIU._getloc(m.vq)]
+            vcat($(_getlocfield.(funs)...))
         end
 
         $code

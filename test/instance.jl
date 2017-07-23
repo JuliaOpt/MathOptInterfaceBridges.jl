@@ -2,7 +2,11 @@ MOIU.@instance(Instance,
                (), # <- example of giving no set
                (EqualTo, GreaterThan, LessThan, Interval),
                (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle, PositiveSemidefiniteConeScaled),
-               (PowerCone,)) # <- example of giving only one set
+               (PowerCone, DualPowerCone),
+               (SingleVariable,), # <- example of giving only one set
+               (ScalarAffineFunction, ScalarQuadraticFunction),
+               (VectorOfVariables,),
+               (VectorAffineFunction, VectorQuadraticFunction))
 
 # Taken from MOI/test/contlinear.jl
 @testset "Basic solve, query, resolve" begin
