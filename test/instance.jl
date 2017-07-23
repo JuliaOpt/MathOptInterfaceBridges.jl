@@ -1,3 +1,5 @@
+MOIU.@instance LPInstance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
+
 MOIU.@instance(Instance,
                (), # <- example of giving no set
                (EqualTo, GreaterThan, LessThan, Interval),

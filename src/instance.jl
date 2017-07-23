@@ -176,7 +176,7 @@ To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 
 The instance describing an linear program would be:
 ```
-@instance Instance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable, ScalarAffineFunction) (VectorOfVariables, VectorAffineFunction)
+@instance Instance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
 ```
 """
 macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
