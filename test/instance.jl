@@ -174,12 +174,21 @@ end
     c6 = MOI.addconstraint!(m, f6, MOI.SecondOrderCone(2))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 2
 
-    loc = MOI.getattribute(m, MOI.ListOfConstraints())
-    @test length(loc) == 4
-    @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
-    @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
-    @test (MOI.VectorOfVariables,MOI.RotatedSecondOrderCone) in loc
-    @test (MOI.VectorAffineFunction{Int},MOI.SecondOrderCone) in loc
+    loc1 = MOI.getattribute(m, MOI.ListOfConstraints())
+    loc2 = Vector{Tuple{DataType, DataType}}()
+    function _pushloc{F, S}(constrs::Vector{MOIU.C{F, S}})
+        if !isempty(constrs)
+            push!(loc2, (F, S))
+        end
+    end
+    MOIU.broadcastcall(_pushloc, m)
+    for loc in (loc1, loc2)
+        @test length(loc) == 4
+        @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
+        @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
+        @test (MOI.VectorOfVariables,MOI.RotatedSecondOrderCone) in loc
+        @test (MOI.VectorAffineFunction{Int},MOI.SecondOrderCone) in loc
+    end
 
     MOI.delete!(m, c4)
 

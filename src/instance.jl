@@ -84,8 +84,6 @@ end
 
 MOI.getattribute(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
 
-function broadcastvcat end
-
 function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraints)
     broadcastvcat(_getloc, m)
 end
@@ -106,6 +104,20 @@ end
 function MOI.getattribute(m::AbstractInstance, ::MOI.ConstraintSet, cr::CR)
     _getset(m, cr, getconstrloc(m, cr))
 end
+
+# Can be used to access constraints of an instance
+"""
+    broadcastcall(f::Function, m::AbstractInstance)
+
+Calls `f(contrs)` for every vector `constrs::Vector{ConstraintReference{F, S}, F, S}` of the instance.
+"""
+function broadcastcall end
+"""
+    broadcastvcat(f::Function, m::AbstractInstance)
+
+Calls `f(contrs)` for every vector `constrs::Vector{ConstraintReference{F, S}, F, S}` of the instance and concatenate the results with `vcat` (this is used internally for `ListOfConstraints`).
+"""
+function broadcastvcat end
 
 # Macro to generate Instance
 abstract type Constraints{F} end
@@ -203,6 +215,9 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     end
 
     code = quote
+        function MOIU.broadcastcall(f::Function, m::$instancename)
+            $(Expr(:block, _broadcastfield.(:(MOIU.broadcastcall), funs)...))
+        end
         function MOIU.broadcastvcat(f::Function, m::$instancename)
             vcat($(_broadcastfield.(:(MOIU.broadcastvcat), funs)...))
         end
@@ -210,6 +225,9 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     for (cname, sets) in ((scname, scalarsets), (vcname, vectorsets))
         code = quote
             $code
+            function MOIU.broadcastcall(f::Function, m::$cname)
+                $(Expr(:block, _callfield.(:f, sets)...))
+            end
             function MOIU.broadcastvcat(f::Function, m::$cname)
                 vcat($(_callfield.(:f, sets)...))
             end
