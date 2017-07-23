@@ -84,6 +84,12 @@ end
 
 MOI.getattribute(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
 
+function broadcastvcat end
+
+function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraints)
+    broadcastvcat(_getloc, m)
+end
+
 MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.NumberOfConstraints,
                                                  MOI.ListOfConstraints,
@@ -145,7 +151,8 @@ end
 _getCV(s::SymbolSet) = :($(_getC(s))[])
 _getCV(s::SymbolFun) = :($(s.cname){T, $(_getC(s))}())
 
-_getlocfield(s::SymbolFS) = :(MOIU._getloc(m.$(_field(s))))
+_callfield(f, s::SymbolFS) = :($f(m.$(_field(s))))
+_broadcastfield(b, s::SymbolFS) = :($b(f, m.$(_field(s))))
 
 """
     macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets, scalarfunctions, vectorfunctions)
@@ -195,7 +202,20 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         push!(instancedef.args[2].args[3].args, :($field::$cname{T, $(_getC(f))}))
     end
 
-    code = :()
+    code = quote
+        function MOIU.broadcastvcat(f::Function, m::$instancename)
+            vcat($(_broadcastfield.(:(MOIU.broadcastvcat), funs)...))
+        end
+    end
+    for (cname, sets) in ((scname, scalarsets), (vcname, vectorsets))
+        code = quote
+            $code
+            function MOIU.broadcastvcat(f::Function, m::$cname)
+                vcat($(_callfield.(:f, sets)...))
+            end
+        end
+    end
+
     for (func, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, CR), (:_getfunction, CR), (:_getset, CR), (:_getnoc, MOI.NumberOfConstraints))
         funct = _mod(MOIU, func)
         for (c, ss) in ((scname, scalarsets), (vcname, vectorsets))
@@ -230,22 +250,11 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             $vcname{T, F}($(_getCV.(vectorsets)...))
         end
 
-        function MOIU._getloc(m::$scname)
-            vcat($(_getlocfield.(scalarsets)...))
-        end
-        function MOIU._getloc(m::$vcname)
-            vcat($(_getlocfield.(vectorsets)...))
-        end
-
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MOI.FeasibilitySense, MOIU.SAF{T}(MOI.VariableReference[], T[], zero(T)),
                    0, 0, Int[],
                    $(_getCV.(funs)...))
-        end
-
-        function MOI.getattribute(m::$instancename, loc::MOI.ListOfConstraints)
-            vcat($(_getlocfield.(funs)...))
         end
 
         $code
