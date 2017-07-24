@@ -72,6 +72,45 @@ function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadrat
 end
 
 
+function _rmvar(vrs::Vector{MOI.VariableReference}, vr::MOI.VariableReference)
+    find(v -> v != vr, vrs)
+end
+function _rmvar(vrs1::Vector{MOI.VariableReference}, vrs2::Vector{MOI.VariableReference}, vr::MOI.VariableReference)
+    @assert eachindex(vrs1) == eachindex(vrs2)
+    find(i -> vrs1[i] != vr && vrs2[i] != vr, eachindex(vrs1))
+end
+
+"""
+    removevariable(f::AbstractFunction, vr::VariableReference)
+
+Return a new function `f` with the variable vr removed.
+"""
+function removevariable(f::MOI.VectorOfVariables, vr)
+    MOI.VectorOfVariables(f.variables[_rmvar(f.variables, vr)])
+end
+function removevariable(f::MOI.ScalarAffineFunction, vr)
+    I = _rmvar(f.variables, vr)
+    MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant)
+end
+function removevariable(f::MOI.ScalarQuadraticFunction, vr)
+    I = _rmvar(f.affine_variables, vr)
+    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vr)
+    MOI.ScalarQuadraticFunction(f.affine_variables[I], f.affine_coefficients[I],
+                                f.quadratic_rowvariables[J], f.quadratic_colvariables[J], f.quadratic_coefficients[J],
+                                f.constant)
+end
+function removevariable(f::MOI.VectorAffineFunction, vr)
+    I = _rmvar(f.variables, vr)
+    MOI.VectorAffineFunction(f.outputindex[I], f.variables[I], f.coefficients[I], f.constant)
+end
+function removevariable(f::MOI.VectorQuadraticFunction, vr)
+    I = _rmvar(f.affine_variables, vr)
+    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vr)
+    MOI.VectorQuadraticFunction(f.affine_outputindex[I], f.affine_variables[I], f.affine_coefficients[I],
+                                f.quadratic_outputindex[J], f.quadratic_rowvariables[J], f.quadratic_colvariables[J], f.quadratic_coefficients[J],
+                                f.constant)
+end
+
 """
     modifyfunction(f::AbstractFunction, change::AbstractFunctionModification)
 
@@ -91,8 +130,8 @@ function modifyfunction(f::MOI.VectorAffineFunction, change::MOI.VectorConstantC
 end
 function modifyfunction(f::MOI.VectorQuadraticFunction, change::MOI.VectorConstantChange)
     MOI.VectorQuadraticFunction(f.affine_outputindex, f.affine_variables, f.affine_coefficients,
-                            f.quadratic_outputindex, f.quadratic_rowvariables, f.quadratic_colvariables, f.quadratic_coefficients,
-                            change.new_constant)
+                                f.quadratic_outputindex, f.quadratic_rowvariables, f.quadratic_colvariables, f.quadratic_coefficients,
+                                change.new_constant)
 end
 
 function _modifycoefficient(variables::Vector{MOI.VariableReference}, coefficients::Vector, variable::MOI.VariableReference, new_coefficient)

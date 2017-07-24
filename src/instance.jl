@@ -49,6 +49,42 @@ function MOI.addvariables!(m::AbstractInstance, n::Integer)
     [MOI.addvariable!(m) for i in 1:n]
 end
 
+function _removevar(cr::CR, f, s, vr::MOI.VariableReference)
+    (cr, removevariable(f, vr), s)
+end
+function _removevar(cr::CR, f::MOI.VectorOfVariables, s, vr::MOI.VariableReference)
+    g = removevariable(f, vr)
+    if length(g.variables) != length(f.variables)
+        t = updatedimension(s, length(g.variables))
+    else
+        t = s
+    end
+    (cr, g, t)
+end
+function _removevar!(constrs::Vector, vr::MOI.VariableReference)
+    for i in eachindex(constrs)
+        constrs[i] = _removevar(constrs[i]..., vr)
+    end
+    []
+end
+function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vr::MOI.VariableReference)
+    # If a variable is removed, the SingleVariable constraints using this variable
+    # need to be removed too
+    rm = []
+    for (cr, f, s) in constrs
+        if f.variable == vr
+            push!(rm, cr)
+        end
+    end
+    rm
+end
+function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
+    rm = broadcastvcat(constrs -> _removevar!(constrs, vr), m)
+    for cr in rm
+        MOI.delete!(m, cr)
+    end
+end
+
 # Objective
 MOI.getattribute(m::AbstractInstance, ::MOI.Sense) = m.sense
 MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective

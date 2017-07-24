@@ -133,6 +133,15 @@ MOIU.@instance(Instance,
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.GreaterThan{Float64}}()) == 1
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.LessThan{Float64}}()) == 0
     @test MOI.getattribute(m, MOI.ConstraintFunction(), c2) ≈ cf2
+
+    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 2
+    MOI.delete!(m, v[1])
+    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 1
+
+    f = MOI.getattribute(m, MOI.ConstraintFunction(), c2)
+    @test f.variables == [v[2], z]
+    @test f.coefficients == [-1.0, 0.0]
+
 end
 
 @testset "Quadratic functions" begin
@@ -176,6 +185,10 @@ end
     c6 = MOI.addconstraint!(m, f6, MOI.SecondOrderCone(2))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 2
 
+    f7 = MOI.VectorOfVariables([x, y])
+    c7 = MOI.addconstraint!(m, f7, MOI.Nonpositives(2))
+    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorOfVariables,MOI.Nonpositives}()) == 1
+
     loc1 = MOI.getattribute(m, MOI.ListOfConstraints())
     loc2 = Vector{Tuple{DataType, DataType}}()
     function _pushloc{F, S}(constrs::Vector{MOIU.C{F, S}})
@@ -185,16 +198,45 @@ end
     end
     MOIU.broadcastcall(_pushloc, m)
     for loc in (loc1, loc2)
-        @test length(loc) == 4
+        @test length(loc) == 5
         @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
         @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
         @test (MOI.VectorOfVariables,MOI.RotatedSecondOrderCone) in loc
         @test (MOI.VectorAffineFunction{Int},MOI.SecondOrderCone) in loc
+        @test (MOI.VectorOfVariables,MOI.Nonpositives) in loc
     end
 
     MOI.delete!(m, c4)
 
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 1
     @test MOI.getattribute(m, MOI.ConstraintFunction(), c6).constant == f6.constant
+
+    MOI.delete!(m, c5)
+
+    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorOfVariables,MOI.RotatedSecondOrderCone}()) == 0
+
+    MOI.delete!(m, y)
+
+    f = MOI.getattribute(m, MOI.ConstraintFunction(), c2)
+    @test f.affine_outputindex == [1, 2]
+    @test f.affine_variables == [x, x]
+    @test f.affine_coefficients == [3, 1]
+    @test f.quadratic_outputindex == [1]
+    @test f.quadratic_rowvariables == [x]
+    @test f.quadratic_colvariables == [x]
+    @test f.quadratic_coefficients == [1]
+    @test f.constant == [7, 3, 4]
+
+    f =  MOI.getattribute(m, MOI.ConstraintFunction(), c6)
+    @test f.outputindex == [1]
+    @test f.variables == [x]
+    @test f.coefficients == [2]
+    @test f.constant == [6, 8]
+
+    f =  MOI.getattribute(m, MOI.ConstraintFunction(), c7)
+    @test f.variables == [x]
+
+    s =  MOI.getattribute(m, MOI.ConstraintSet(), c7)
+    @test MOI.dimension(s) == 1
 
 end
