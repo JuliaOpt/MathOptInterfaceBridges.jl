@@ -179,8 +179,8 @@ end
     c4 = MOI.addconstraint!(m, f4, MOI.SecondOrderCone(2))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 1
 
-    f5 = MOI.VectorOfVariables([x, y])
-    c5 = MOI.addconstraint!(m, f5, MOI.RotatedSecondOrderCone(2))
+    f5 = MOI.VectorOfVariables([x])
+    c5 = MOI.addconstraint!(m, f5, MOI.RotatedSecondOrderCone(1))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorOfVariables,MOI.RotatedSecondOrderCone}()) == 1
 
     f6 = MOI.VectorAffineFunction([1, 2], [x, y], [2, 9], [6, 8])
@@ -212,10 +212,6 @@ end
 
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 1
     @test MOI.getattribute(m, MOI.ConstraintFunction(), c6).constant == f6.constant
-
-    MOI.delete!(m, c5)
-
-    @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorOfVariables,MOI.RotatedSecondOrderCone}()) == 0
 
     MOI.delete!(m, y)
 
