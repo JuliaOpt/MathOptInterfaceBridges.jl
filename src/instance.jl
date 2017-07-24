@@ -79,6 +79,7 @@ function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vr::MOI.VariableR
     rm
 end
 function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
+    m.objective = removevariable(m.objective, vr)
     rm = broadcastvcat(constrs -> _removevar!(constrs, vr), m)
     for cr in rm
         MOI.delete!(m, cr)

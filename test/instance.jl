@@ -142,6 +142,8 @@ MOIU.@instance(Instance,
     @test f.variables == [v[2], z]
     @test f.coefficients == [-1.0, 0.0]
 
+    @test MOI.getattribute(m, MOI.ObjectiveFunction()) ≈ MOI.ScalarAffineFunction([v[2], z], [2.0, 0.0], 0.0)
+
 end
 
 @testset "Quadratic functions" begin
