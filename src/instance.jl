@@ -147,12 +147,34 @@ end
     broadcastcall(f::Function, m::AbstractInstance)
 
 Calls `f(contrs)` for every vector `constrs::Vector{ConstraintReference{F, S}, F, S}` of the instance.
+
+# Examples
+
+To add all constraints of the instance to a solver `solver`, one can do
+```julia
+_addcon(solver, cr, f, s) = MOI.addconstraint!(solver, f, s)
+function _addcon(solver, constrs::Vector)
+    for constr in constrs
+        _addcon(solver, constr...)
+    end
+end
+MOIU.broadcastcall(constrs -> _addcon(solver, constrs), instance)
+```
 """
 function broadcastcall end
 """
     broadcastvcat(f::Function, m::AbstractInstance)
 
 Calls `f(contrs)` for every vector `constrs::Vector{ConstraintReference{F, S}, F, S}` of the instance and concatenate the results with `vcat` (this is used internally for `ListOfConstraints`).
+
+# Examples
+
+To get the list of all functions:
+```julia
+_getfun(cr, f, s) = f
+_getfun(crfs::Tuple) = _getfun(crfs...)
+_getfuns(constrs::Vector) = _getfun.(constrs)
+MOIU.broadcastvcat(_getfuns, instance)
 """
 function broadcastvcat end
 
@@ -176,16 +198,16 @@ end
 # Expr(:., MOI, :($s)) would be Expr(:., MOI, :EqualTo)
 # Expr(:., MOI, :($(QuoteNode(s)))) is Expr(:., MOI, :(:EqualTo)) <- what we want
 _mod(m, s::Symbol) = Expr(:., m, :($(QuoteNode(s))))
-_set(s::SymbolSet) = _mod(MOI, s.s)
-_fun(s::SymbolFun) = _mod(MOI, s.s)
+_set(s::SymbolSet) = _mod(MathOptInterface, s.s)
+_fun(s::SymbolFun) = _mod(MathOptInterface, s.s)
 
 _field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
 
 function _getC(s::SymbolSet)
     if s.typed
-        :(MOIU.C{F, $(_set(s)){T}})
+        :(MathOptInterfaceUtilities.C{F, $(_set(s)){T}})
     else
-        :(MOIU.C{F, $(_set(s))})
+        :(MathOptInterfaceUtilities.C{F, $(_set(s))})
     end
 end
 function _getC(s::SymbolFun)
@@ -213,8 +235,36 @@ To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 
 The instance describing an linear program would be:
 ```
-@instance Instance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
+@instance LPInstance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
 ```
+
+Let `MOI` denote `MathOptInterface`, `MOIU` denote `MathOptInterfaceUtilities` and `MOIU.C{F, S}` be defined as `MOI.Tuple{CR{F, S}, F, S}`.
+The macro would create the types:
+```julia
+struct LPInstanceScalarConstraints{T, F <: MOI.AbstractScalarFunction} <: MOIU.Constraints{F}
+    equalto::Vector{MOIU.C{F, MOI.EqualTo{T}}}
+    greaterthan::Vector{MOIU.C{F, MOI.GreaterThan{T}}}
+    lessthan::Vector{MOIU.C{F, MOI.LessThan{T}}}
+    interval::Vector{MOIU.C{F, MOI.Interval{T}}}
+end
+struct LPInstanceVectorConstraints{T, F <: MOI.AbstractVectorFunction} <: MOIU.Constraints{F}
+    zeros::Vector{MOIU.C{F, MOI.Zeros}}
+    nonnegatives::Vector{MOIU.C{F, MOI.Nonnegatives}}
+    nonpositives::Vector{MOIU.C{F, MOI.Nonpositives}}
+end
+mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
+    sense::MOI.OptimizationSense
+    objective::MOI.ScalarAffineFunction{T}
+    nvars::UInt64
+    nconstrs::UInt64
+    constrmap::Vector{Int}
+    singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
+    scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
+    vectorofvariables::LPInstanceVectorConstraints{T, MOI.VectorOfVariables}
+    vectoraffinefunction::LPInstanceVectorConstraints{T, MOI.VectorAffineFunction{T}}
+end
+```
+The type `LPInstance` implements the MathOptInterface API except methods specific to solver instances like `optimize!` or `getattribute` with `VariablePrimal`.
 """
 macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     scalarsets = [SymbolSet.(ss.args, false); SymbolSet.(sst.args, true)]
@@ -227,8 +277,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     vectorfuns = [SymbolFun.(vf.args, false, vcname); SymbolFun.(vft.args, true, vcname)]
     funs = [scalarfuns; vectorfuns]
 
-    scalarconstraints = :(struct $scname{T, F<:MOI.AbstractScalarFunction} <: MOIU.Constraints{F}; end)
-    vectorconstraints = :(struct $vcname{T, F<:MOI.AbstractVectorFunction} <: MOIU.Constraints{F}; end)
+    scalarconstraints = :(struct $scname{T, F<:MathOptInterface.AbstractScalarFunction} <: MathOptInterfaceUtilities.Constraints{F}; end)
+    vectorconstraints = :(struct $vcname{T, F<:MathOptInterface.AbstractVectorFunction} <: MathOptInterfaceUtilities.Constraints{F}; end)
     for (c, ss) in ((scalarconstraints, scalarsets), (vectorconstraints, vectorsets))
         for s in ss
             field = _field(s)
@@ -237,9 +287,9 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     end
 
     instancedef = quote
-        mutable struct $instancename{T} <: MOIU.AbstractInstance{T}
-            sense::MOI.OptimizationSense
-            objective::MOIU.SAF{T}
+        mutable struct $instancename{T} <: MathOptInterfaceUtilities.AbstractInstance{T}
+            sense::MathOptInterface.OptimizationSense
+            objective::MathOptInterface.ScalarAffineFunction{T}
             nvars::UInt64
             nconstrs::UInt64
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
@@ -252,27 +302,27 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     end
 
     code = quote
-        function MOIU.broadcastcall(f::Function, m::$instancename)
-            $(Expr(:block, _broadcastfield.(:(MOIU.broadcastcall), funs)...))
+        function MathOptInterfaceUtilities.broadcastcall(f::Function, m::$instancename)
+            $(Expr(:block, _broadcastfield.(:(MathOptInterfaceUtilities.broadcastcall), funs)...))
         end
-        function MOIU.broadcastvcat(f::Function, m::$instancename)
-            vcat($(_broadcastfield.(:(MOIU.broadcastvcat), funs)...))
+        function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$instancename)
+            vcat($(_broadcastfield.(:(MathOptInterfaceUtilities.broadcastvcat), funs)...))
         end
     end
     for (cname, sets) in ((scname, scalarsets), (vcname, vectorsets))
         code = quote
             $code
-            function MOIU.broadcastcall(f::Function, m::$cname)
+            function MathOptInterfaceUtilities.broadcastcall(f::Function, m::$cname)
                 $(Expr(:block, _callfield.(:f, sets)...))
             end
-            function MOIU.broadcastvcat(f::Function, m::$cname)
+            function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$cname)
                 vcat($(_callfield.(:f, sets)...))
             end
         end
     end
 
-    for (func, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, CR), (:_getfunction, CR), (:_getset, CR), (:_getnoc, MOI.NumberOfConstraints))
-        funct = _mod(MOIU, func)
+    for (func, T) in ((:_addconstraint!, CR), (:_modifyconstraint!, CR), (:_delete!, CR), (:_getfunction, CR), (:_getset, CR), (:_getnoc, MathOptInterface.NumberOfConstraints))
+        funct = _mod(MathOptInterfaceUtilities, func)
         for (c, ss) in ((scname, scalarsets), (vcname, vectorsets))
             for s in ss
                 set = _set(s)
@@ -307,7 +357,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
 
         $instancedef
         function $instancename{T}() where T
-            $instancename{T}(MOI.FeasibilitySense, MOIU.SAF{T}(MOI.VariableReference[], T[], zero(T)),
+            $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
                    0, 0, Int[],
                    $(_getCV.(funs)...))
         end
