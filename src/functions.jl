@@ -25,7 +25,21 @@ Base.deepcopy(f::VQF) = VQF(copy(f.affine_outputindex),
 
 # Utilities for getting a canonical representation of a function
 Base.isless(v1::VR, v2::VR) = isless(v1.value, v2.value)
-function canonicalize{T}(f::SAF{T})
+"""
+    canonical(f::AbstractFunction)
+
+Returns the funcion in a canonical form, i.e.
+* A term appear only once.
+* The coefficients are nonzero.
+* The terms appear in increasing order of variable where there the order of the variables is the order of their value.
+* For a `AbstractVectorFunction`, the terms are sorted in ascending order of output index.
+
+### Examples
+If `x` (resp. `y`, `z`) is `VariableReference(1)` (resp. 2, 3).
+The canonical representation of `ScalarAffineFunction([y, x, z, x, z], [2, 1, 3, -2, -3], 5)` is `ScalarAffineFunction([x, y], [-1, 2], 5)`.
+
+"""
+function canonical{T}(f::SAF{T})
     σ = sortperm(f.variables)
     outputindex = Int[]
     variables = VR[]
@@ -50,7 +64,7 @@ function canonicalize{T}(f::SAF{T})
     end
     SAF{T}(variables, coefficients, f.constant)
 end
-function canonicalize{T}(f::VAF{T})
+function canonical{T}(f::VAF{T})
     σ = sortperm(1:length(f.variables), by = i -> (f.outputindex[i], f.variables[i]))
     outputindex = Int[]
     variables = VR[]
@@ -104,8 +118,8 @@ function _isapprox(vars1, coeffs1, vars2, coeffs2; kwargs...)
 end
 
 function Base.isapprox(f1::MOI.VectorAffineFunction, f2::MOI.VectorAffineFunction; kwargs...)
-    f1 = canonicalize(f1)
-    f2 = canonicalize(f2)
+    f1 = canonical(f1)
+    f2 = canonical(f2)
     _isapprox(collect(zip(f1.outputindex, f1.variables)), f1.coefficients, collect(zip(f2.outputindex, f2.variables)), f2.coefficients; kwargs...)
 end
 
