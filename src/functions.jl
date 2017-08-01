@@ -123,6 +123,12 @@ function Base.isapprox(f1::MOI.VectorAffineFunction, f2::MOI.VectorAffineFunctio
     _isapprox(collect(zip(f1.outputindex, f1.variables)), f1.coefficients, collect(zip(f2.outputindex, f2.variables)), f2.coefficients; kwargs...)
 end
 
+function Base.isapprox(f1::MOI.ScalarAffineFunction, f2::MOI.ScalarAffineFunction; kwargs...)
+    f1 = canonical(f1)
+    f2 = canonical(f2)
+    _isapprox(f1.variables, f1.coefficients, f2.variables, f2.coefficients; kwargs...)
+end
+
 function Base.isapprox(f1::MOI.ScalarAffineFunction{T}, f2::MOI.ScalarAffineFunction{T}; kwargs...) where {T}
     function canonicalize(f)
         d = Dict{MOI.VariableReference,T}()

@@ -14,6 +14,8 @@
     end
     @testset "Scalar" begin
         @testset "Affine" begin
+            @test MOI.ScalarAffineFunction([x, z], [1, 1], 1) ≈ MOI.ScalarAffineFunction([x, y, z], [1, 1e-7, 1], 1.) atol=1e-6
+            @test MOI.ScalarAffineFunction([x, y], [1, 1e-7], 1.) ≈ MOI.ScalarAffineFunction([x], [1], 1) atol=1e-6
             f = MOIU.canonical(MOI.ScalarAffineFunction([y, x, z, x, z], [2, 1, 3, -2, -3], 5))
             @test f.variables == [x, y]
             @test f.coefficients == [-1, 2]
