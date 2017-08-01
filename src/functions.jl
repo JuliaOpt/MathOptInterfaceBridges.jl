@@ -23,12 +23,93 @@ Base.deepcopy(f::VQF) = VQF(copy(f.affine_outputindex),
                             copy(f.quadratic_coefficients),
                             f.constant)
 
-
+# Utilities for getting a canonical representation of a function
+Base.isless(v1::VR, v2::VR) = isless(v1.value, v2.value)
+function canonicalize{T}(f::SAF{T})
+    σ = sortperm(f.variables)
+    outputindex = Int[]
+    variables = VR[]
+    coefficients = T[]
+    prev = 0
+    for i in σ
+        if !isempty(variables) && f.variables[i] == last(variables)
+            coefficients[end] += f.coefficients[i]
+        elseif !iszero(f.coefficients[i])
+            if !isempty(variables) && iszero(last(coefficients))
+                variables[end] = f.variables[i]
+                coefficients[end] = f.coefficients[i]
+            else
+                push!(variables, f.variables[i])
+                push!(coefficients, f.coefficients[i])
+            end
+        end
+    end
+    if !isempty(variables) && iszero(last(coefficients))
+        pop!(variables)
+        pop!(coefficients)
+    end
+    SAF{T}(variables, coefficients, f.constant)
+end
+function canonicalize{T}(f::VAF{T})
+    σ = sortperm(1:length(f.variables), by = i -> (f.outputindex[i], f.variables[i]))
+    outputindex = Int[]
+    variables = VR[]
+    coefficients = T[]
+    prev = 0
+    for i in σ
+        if !isempty(variables) && f.outputindex[i] == last(outputindex) && f.variables[i] == last(variables)
+            coefficients[end] += f.coefficients[i]
+        elseif !iszero(f.coefficients[i])
+            if !isempty(variables) && iszero(last(coefficients))
+                outputindex[end] = f.outputindex[i]
+                variables[end] = f.variables[i]
+                coefficients[end] = f.coefficients[i]
+            else
+                push!(outputindex, f.outputindex[i])
+                push!(variables, f.variables[i])
+                push!(coefficients, f.coefficients[i])
+            end
+        end
+    end
+    if !isempty(variables) && iszero(last(coefficients))
+        pop!(outputindex)
+        pop!(variables)
+        pop!(coefficients)
+    end
+    VAF{T}(outputindex, variables, coefficients, f.constant)
+end
 
 # Utilities for comparing functions
 # Define isapprox so that we can use ≈ in tests
 
-function Base.isapprox(f1::MOI.ScalarAffineFunction{T}, f2::MOI.ScalarAffineFunction{T}; nans = false, kwargs...) where {T}
+function _isapprox(vars1, coeffs1, vars2, coeffs2; kwargs...)
+    m = length(vars1)
+    n = length(vars2)
+    i = 1
+    j = 1
+    while i <= m || j <= n
+        if i <= m && j <= n && vars1[i] == vars2[j]
+            isapprox(coeffs1[i], coeffs2[j]; kwargs...) || return false
+            i += 1
+            j += 1
+        elseif j > n || (i <= m && vars1[i] < vars2[j])
+            isapprox(coeffs1[i], 0.0; kwargs...) || return false
+            i += 1
+        else
+            isapprox(0.0, coeffs2[j]; kwargs...) || return false
+            j += 1
+        end
+    end
+    return true
+end
+
+function Base.isapprox(f1::MOI.VectorAffineFunction, f2::MOI.VectorAffineFunction; kwargs...)
+    f1 = canonicalize(f1)
+    f2 = canonicalize(f2)
+    _isapprox(collect(zip(f1.outputindex, f1.variables)), f1.coefficients, collect(zip(f2.outputindex, f2.variables)), f2.coefficients; kwargs...)
+end
+
+function Base.isapprox(f1::MOI.ScalarAffineFunction{T}, f2::MOI.ScalarAffineFunction{T}; kwargs...) where {T}
     function canonicalize(f)
         d = Dict{MOI.VariableReference,T}()
         @assert length(f.variables) == length(f.coefficients)
@@ -42,10 +123,10 @@ function Base.isapprox(f1::MOI.ScalarAffineFunction{T}, f2::MOI.ScalarAffineFunc
     for (var,coef) in d2
         d1[var] = get(d1,var,zero(T)) - coef
     end
-    return isapprox([c2-c1;collect(values(d1))], zeros(T,length(d1)+1); nans=nans, kwargs...)
+    return isapprox([c2-c1;collect(values(d1))], zeros(T,length(d1)+1); kwargs...)
 end
 
-function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadraticFunction{T}; nans = false, kwargs...) where {T}
+function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadraticFunction{T}; kwargs...) where {T}
     function canonicalize(f)
         affine_d = Dict{MOI.VariableReference,T}()
         @assert length(f.affine_variables) == length(f.affine_coefficients)
@@ -68,7 +149,7 @@ function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadrat
     for (vars,coef) in quad_d2
         quad_d1[vars] = get(quad_d1,vars,zero(T)) - coef
     end
-    return isapprox([c2-c1;collect(values(aff_d1));collect(values(quad_d1))], zeros(T,length(quad_d1)+length(aff_d1)+1); nans=nans, kwargs...)
+    return isapprox([c2-c1;collect(values(aff_d1));collect(values(quad_d1))], zeros(T,length(quad_d1)+length(aff_d1)+1); kwargs...)
 end
 
 

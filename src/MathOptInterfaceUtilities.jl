@@ -11,10 +11,11 @@ const VAF{T} = MOI.VectorAffineFunction{T}
 const SQF{T} = MOI.ScalarQuadraticFunction{T}
 const VQF{T} = MOI.VectorQuadraticFunction{T}
 
+const VR = MOI.VariableReference
+const CR = MOI.ConstraintReference
+
 include("functions.jl")
 include("sets.jl")
-
-const CR = MOI.ConstraintReference
 
 include("instance.jl")
 
