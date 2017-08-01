@@ -1,6 +1,8 @@
 @testset "Function modification" begin
+    w = MOI.VariableReference(0)
     x = MOI.VariableReference(1)
     y = MOI.VariableReference(2)
+    z = MOI.VariableReference(3)
     @testset "Variablewise constraint copy" begin
         f = MOI.SingleVariable(x)
         g = deepcopy(f)
@@ -12,7 +14,17 @@
     end
     @testset "Scalar" begin
         @testset "Affine" begin
-            f = MOI.ScalarAffineFunction([x, y], [2, 4], 5)
+            @test MOI.ScalarAffineFunction([x, z], [1, 1], 1) ≈ MOI.ScalarAffineFunction([x, y, z], [1, 1e-7, 1], 1.) atol=1e-6
+            @test MOI.ScalarAffineFunction([x, y], [1, 1e-7], 1.) ≈ MOI.ScalarAffineFunction([x], [1], 1) atol=1e-6
+            f = MOIU.canonical(MOI.ScalarAffineFunction([y, x, z, x, z], [2, 1, 3, -2, -3], 5))
+            @test f.variables == [x, y]
+            @test f.coefficients == [-1, 2]
+            @test f.constant == 5
+            f = MOIU.canonical(MOI.ScalarAffineFunction([w, y, w, x,  x, z,  y,  z,  w, x, y],
+                                                        [1, 3, 1, 2, -3, 2, -1, -2, -2, 3, 2], 5))
+            @test f.variables == [x, y]
+            @test f.coefficients == [2, 4]
+            @test f.constant == 5
             f = MOIU.modifyfunction(f, MOI.ScalarConstantChange(6))
             @test f.constant == 6
             g = deepcopy(f)
@@ -44,11 +56,19 @@
     end
     @testset "Vector" begin
         @testset "Affine" begin
-            f = MOI.VectorAffineFunction([1, 1, 2], [x, y, y], [2, 4, 3], [5, 7])
+            f = MOIU.canonical(MOI.VectorAffineFunction([2, 1, 2,  1,  1,  2, 2,  2, 2, 1, 1,  2, 1,  2],
+                                                        [x, x, z,  y,  y,  x, y,  z, x, y, y,  x, x,  z],
+                                                        [3, 2, 3, -3, -1, -2, 3, -2, 1, 3, 5, -2, 0, -1], [5, 7]))
+            @test f.outputindex == [1, 1, 2]
+            @test f.variables == [x, y, y]
+            @test f.coefficients == [2, 4, 3]
+            @test f.constant == [5, 7]
             f = MOIU.modifyfunction(f, MOI.VectorConstantChange([6, 8]))
             @test f.constant == [6, 8]
             g = deepcopy(f)
+            @test f ≈ g
             f = MOIU.modifyfunction(f, MOI.MultirowChange(y, [2], [9]))
+            @test !(f ≈ g)
             @test f.outputindex == [1, 1, 2]
             @test f.variables == [x, y, y]
             @test g.coefficients == [2, 4, 3]
