@@ -87,7 +87,7 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
 end
 
 # Objective
-MOI.getattribute(m::AbstractInstance, ::MOI.Sense) = m.sense
+MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
 MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
 
 function MOI.setobjective!(m::AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
@@ -129,7 +129,7 @@ MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.NumberOfConstraints,
                                                  MOI.ListOfConstraints,
                                                  MOI.ObjectiveFunction,
-                                                 MOI.Sense}) = true
+                                                 MOI.ObjectiveSense}) = true
 
 MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
                                                  MOI.ConstraintSet}, ref) = true

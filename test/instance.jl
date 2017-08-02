@@ -33,7 +33,7 @@ MOIU.@instance(Instance,
     objf = MOI.ScalarAffineFunction(v, [-1.0,0.0], 0.0)
     MOI.setobjective!(m, MOI.MinSense, objf)
 
-    @test MOI.getattribute(m, MOI.Sense()) == MOI.MinSense
+    @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MinSense
 
     @test MOI.cangetattribute(m, MOI.ObjectiveFunction())
     @test objf ≈ MOI.getattribute(m, MOI.ObjectiveFunction())
@@ -61,7 +61,7 @@ MOIU.@instance(Instance,
     @test MOI.cangetattribute(m, MOI.ObjectiveFunction())
     @test objf ≈ MOI.getattribute(m, MOI.ObjectiveFunction())
 
-    @test MOI.getattribute(m, MOI.Sense()) == MOI.MaxSense
+    @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MaxSense
 
     # add new variable to get :
     # max x + 2z
