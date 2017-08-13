@@ -1,3 +1,8 @@
+function Base.getindex(f::MOI.VectorAffineFunction, i)
+    I = find(oi -> oi == i, f.outputindex)
+    MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant[i])
+end
+
 # Define copy of function
 Base.deepcopy(f::SVF) = f
 Base.deepcopy(f::VVF) = VVF(copy(f.variables))
