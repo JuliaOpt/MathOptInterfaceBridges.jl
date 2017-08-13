@@ -1,6 +1,21 @@
-function Base.getindex(f::MOI.VectorAffineFunction, i)
+function Base.getindex(f::MOI.VectorAffineFunction, i::Integer)
     I = find(oi -> oi == i, f.outputindex)
     MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant[i])
+end
+
+function Base.getindex(f::MOI.VectorAffineFunction{T}, I::AbstractVector) where T
+    outputindex = Int[]
+    variables = VR[]
+    coefficients = T[]
+    constant = Vector{T}(length(I))
+    for (i, j) in enumerate(I)
+        g = f[j]
+        append!(outputindex, repmat(i:i, length(g.variables)))
+        append!(variables, g.variables)
+        append!(coefficients, g.coefficients)
+        constant[i] = g.constant
+    end
+    MOI.VectorAffineFunction(outputindex, variables, coefficients, constant)
 end
 
 # Define copy of function

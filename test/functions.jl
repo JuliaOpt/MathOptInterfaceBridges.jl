@@ -6,7 +6,7 @@
     @testset "getindex on VectorAffineFunction" begin
         f = MOI.VectorAffineFunction([2, 1, 3, 2, 2, 1, 3, 1, 2],
                                      [x, y, z, z, y, z, x, x, y],
-                                     [1, 7, 2, 9, 3, 1, 2, 4, 1],
+                                     [1, 7, 2, 9, 3, 1, 6, 4, 1],
                                      [2, 7, 5])
         g = f[2]
         @test g isa MOI.ScalarAffineFunction
@@ -18,6 +18,12 @@
         @test g.variables    == [y, z, x]
         @test g.coefficients == [7, 1, 4]
         @test g.constant == 2
+        h = f[[3, 1]]
+        @test h isa MOI.VectorAffineFunction
+        @test h.outputindex  == [1, 1, 2, 2, 2]
+        @test h.variables    == [z, x, y, z, x]
+        @test h.coefficients == [2, 6, 7, 1, 4]
+        @test h.constant == [5, 2]
     end
     @testset "Variablewise constraint copy" begin
         f = MOI.SingleVariable(x)
