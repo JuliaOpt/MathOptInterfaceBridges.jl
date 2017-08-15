@@ -86,6 +86,8 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
     end
 end
 
+MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
+
 # Objective
 MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
 MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
