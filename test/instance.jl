@@ -98,7 +98,9 @@ MOIU.@instance(Instance,
     # x, y >= 0, z = 0
 
     MOI.modifyconstraint!(m, vc1, MOI.GreaterThan(0.0))
+    @test MOI.isvalid(m, vc3)
     MOI.delete!(m, vc3)
+    @test !MOI.isvalid(m, vc3)
     vc3 = MOI.addconstraint!(m, MOI.SingleVariable(v[3]), MOI.EqualTo(0.0))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 2
 
@@ -107,7 +109,9 @@ MOIU.@instance(Instance,
     # s.t. x + y + z == 2
     # x,y >= 0, z = 0
 
+    @test MOI.isvalid(m, c)
     MOI.delete!(m, c)
+    @test !MOI.isvalid(m, c)
     cf = MOI.ScalarAffineFunction(v, [1.0,1.0,1.0], 0.0)
     c = MOI.addconstraint!(m, cf, MOI.EqualTo(2.0))
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.LessThan{Float64}}()) == 0
@@ -208,7 +212,9 @@ end
         @test (MOI.VectorOfVariables,MOI.Nonpositives) in loc
     end
 
+    @test MOI.isvalid(m, c4)
     MOI.delete!(m, c4)
+    @test !MOI.isvalid(m, c4)
 
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Int},MOI.SecondOrderCone}()) == 1
     @test MOI.getattribute(m, MOI.ConstraintFunction(), c6).constant == f6.constant
