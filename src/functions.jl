@@ -1,3 +1,10 @@
+# Define conversion VectorOfVariable -> VectorAffineFunction{T}
+function MOI.VectorAffineFunction{T}(f::MOI.VectorOfVariables) where T
+    n = length(f.variables)
+    MOI.VectorAffineFunction(collect(1:n), f.variables, ones(T, n), zeros(T, n))
+end
+
+# Define getindex for Vector functions
 function Base.getindex(f::MOI.VectorAffineFunction, i::Integer)
     I = find(oi -> oi == i, f.outputindex)
     MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant[i])

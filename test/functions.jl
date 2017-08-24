@@ -3,6 +3,20 @@
     x = MOI.VariableReference(1)
     y = MOI.VariableReference(2)
     z = MOI.VariableReference(3)
+    @testset "Conversion VectorOfVariables -> VectorAffineFunction" begin
+        f = MOI.VectorAffineFunction{Int}(MOI.VectorOfVariables([z, x, y]))
+        @test f isa MOI.VectorAffineFunction{Int}
+        @test f.outputindex == collect(1:3)
+        @test f.variables == [z, x, y]
+        @test all(f.coefficients .== 1)
+        @test all(iszero.(f.constant))
+        f = MOI.VectorAffineFunction{Float64}(MOI.VectorOfVariables([x, w]))
+        @test f isa MOI.VectorAffineFunction{Float64}
+        @test f.outputindex == collect(1:2)
+        @test f.variables == [x, w]
+        @test all(f.coefficients .== 1)
+        @test all(iszero.(f.constant))
+    end
     @testset "getindex on VectorAffineFunction" begin
         f = MOI.VectorAffineFunction([2, 1, 3, 2, 2, 1, 3, 1, 2],
                                      [x, y, z, z, y, z, x, x, y],
