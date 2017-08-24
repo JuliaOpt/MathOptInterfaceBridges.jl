@@ -98,6 +98,7 @@ function MOI.setobjective!(m::AbstractInstance, sense::MOI.OptimizationSense, f:
     m.objective = deepcopy(f)
 end
 
+MOI.canmodifyobjective(m::AbstractInstance, change::MOI.AbstractFunctionModification) = true
 function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionModification)
     m.objective = modifyfunction(m.objective, change)
 end
@@ -110,6 +111,7 @@ function MOI.addconstraint!{F, S}(m::AbstractInstance, f::F, s::S)
     cr
 end
 
+MOI.candelete(m::AbstractInstance, cr::Union{CR, VR}) = true
 function MOI.delete!(m::AbstractInstance, cr::CR)
     for (cr_next, _, _) in _delete!(m, cr, getconstrloc(m, cr))
         m.constrmap[cr_next.value] -= 1
@@ -117,6 +119,7 @@ function MOI.delete!(m::AbstractInstance, cr::CR)
     m.constrmap[cr.value] = 0
 end
 
+MOI.canmodifyconstraint(m::AbstractInstance, cr::CR, change) = true
 function MOI.modifyconstraint!(m::AbstractInstance, cr::CR, change)
     _modifyconstraint!(m, cr, getconstrloc(m, cr), change)
 end
