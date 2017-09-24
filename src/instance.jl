@@ -259,7 +259,7 @@ struct LPInstanceVectorConstraints{T, F <: MOI.AbstractVectorFunction} <: MOIU.C
 end
 mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
-    objective::MOI.ScalarAffineFunction{T}
+    objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
     nvars::UInt64
     nconstrs::UInt64
     constrmap::Vector{Int}
@@ -294,7 +294,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     instancedef = quote
         mutable struct $instancename{T} <: MathOptInterfaceUtilities.AbstractInstance{T}
             sense::MathOptInterface.OptimizationSense
-            objective::MathOptInterface.ScalarAffineFunction{T}
+            objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
             nvars::UInt64
             nconstrs::UInt64
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
