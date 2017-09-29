@@ -38,7 +38,7 @@ function _getloc{F, S}(constrs::Vector{C{F, S}})::Vector{Tuple{DataType, DataTyp
 end
 
 # Implementation of MOI for AbstractInstance
-abstract type AbstractInstance{T} end
+abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 
 getconstrloc(m::AbstractInstance, cr::CR) = m.constrmap[cr.value]
 
@@ -137,7 +137,7 @@ MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.ObjectiveSense}) = true
 
 MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
-                                                 MOI.ConstraintSet}, ref) = true
+                                                 MOI.ConstraintSet}, ref::MOI.AnyReference) = true
 
 function MOI.getattribute(m::AbstractInstance, ::MOI.ConstraintFunction, cr::CR)
     _getfunction(m, cr, getconstrloc(m, cr))
