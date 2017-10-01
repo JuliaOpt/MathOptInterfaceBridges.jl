@@ -129,10 +129,17 @@ MOI.getattribute(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m,
 function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraints)
     broadcastvcat(_getloc, m)
 end
+function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraintReferences{F, S}) where {F, S}
+    _getlocr(constrs::Vector{C{F, S}}) = map(constr -> constr[1], constrs)
+    _getlocr(constrs::Vector{<:C}) = CR{F, S}[]
+    broadcastvcat(_getlocr, m)
+end
+
 
 MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.NumberOfConstraints,
                                                  MOI.ListOfConstraints,
+                                                 MOI.ListOfConstraintReferences,
                                                  MOI.ObjectiveFunction,
                                                  MOI.ObjectiveSense}) = true
 
