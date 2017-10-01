@@ -37,6 +37,9 @@ function _getloc{F, S}(constrs::Vector{C{F, S}})::Vector{Tuple{DataType, DataTyp
     isempty(constrs) ? [] : [(F, S)]
 end
 
+_getlocr(constrs::Vector{C{F, S}}, ::MOI.ListOfConstraintReferences{F, S}) where {F, S} = map(constr -> constr[1], constrs)
+_getlocr(constrs::Vector{<:C}, ::MOI.ListOfConstraintReferences{F, S}) where {F, S} = CR{F, S}[]
+
 # Implementation of MOI for AbstractInstance
 abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 
@@ -130,9 +133,14 @@ function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraints)
     broadcastvcat(_getloc, m)
 end
 
+function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraintReferences)
+    broadcastvcat(constrs -> _getlocr(constrs, loc), m)
+end
+
 MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.NumberOfConstraints,
                                                  MOI.ListOfConstraints,
+                                                 MOI.ListOfConstraintReferences,
                                                  MOI.ObjectiveFunction,
                                                  MOI.ObjectiveSense}) = true
 

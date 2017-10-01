@@ -161,12 +161,17 @@ end
     c1 = MOI.addconstraint!(m, f1, MOI.Interval(-1, 1))
 
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}()) == 1
+    @test MOI.cangetattribute(m, MOI.ListOfConstraintReferences{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())
+    @test (@inferred MOI.getattribute(m, MOI.ListOfConstraintReferences{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())) == [c1]
 
     f2 = MOI.VectorQuadraticFunction([1, 2, 2], [x, x, y], [3, 1, 2], [1, 1, 2], [x, y, x], [x, y, y], [1, 2, 3], [7, 3, 4])
     c2 = MOI.addconstraint!(m, f2, MOI.PositiveSemidefiniteConeTriangle(3))
 
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}()) == 1
+    @test MOI.cangetattribute(m, MOI.ListOfConstraintReferences{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())
+    @test (@inferred MOI.getattribute(m, MOI.ListOfConstraintReferences{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())) == [c2]
 
+    @test MOI.cangetattribute(m, MOI.ListOfConstraints())
     loc = MOI.getattribute(m, MOI.ListOfConstraints())
     @test length(loc) == 2
     @test (MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle) in loc
