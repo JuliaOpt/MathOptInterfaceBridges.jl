@@ -93,12 +93,13 @@ MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constr
 
 # Objective
 MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
-MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
-
-function MOI.setobjective!(m::AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
-    m.sense = sense
+function MOI.setattribute!(m::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
     # f needs to be copied, see #2
     m.objective = deepcopy(f)
+end
+MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
+function MOI.setattribute!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
+    m.sense = sense
 end
 
 MOI.canmodifyobjective(m::AbstractInstance, change::MOI.AbstractFunctionModification) = true

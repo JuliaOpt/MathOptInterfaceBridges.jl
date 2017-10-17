@@ -31,7 +31,8 @@ MOIU.@instance(Instance,
     @test MOI.getattribute(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 2
 
     objf = MOI.ScalarAffineFunction(v, [-1.0,0.0], 0.0)
-    MOI.setobjective!(m, MOI.MinSense, objf)
+    MOI.setattribute!(m, MOI.ObjectiveFunction(), objf)
+    MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MinSense)
 
     @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MinSense
 
@@ -56,7 +57,8 @@ MOIU.@instance(Instance,
     # change objective to Max +x
 
     objf = MOI.ScalarAffineFunction(v, [1.0,0.0], 0.0)
-    MOI.setobjective!(m, MOI.MaxSense, objf)
+    MOI.setattribute!(m, MOI.ObjectiveFunction(), objf)
+    MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
 
     @test MOI.cangetattribute(m, MOI.ObjectiveFunction())
     @test objf ≈ MOI.getattribute(m, MOI.ObjectiveFunction())
@@ -123,7 +125,8 @@ MOIU.@instance(Instance,
     # x,y >= 0, z = 0
 
     objf = MOI.ScalarAffineFunction(v, [1.0,2.0,0.0], 0.0)
-    MOI.setobjective!(m, MOI.MaxSense, objf)
+    MOI.setattribute!(m, MOI.ObjectiveFunction(), objf)
+    MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
 
     # add constraint x - y >= 0 to get :
     # max x+2y
