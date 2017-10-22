@@ -46,7 +46,7 @@ abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 getconstrloc(m::AbstractInstance, cr::CR) = m.constrmap[cr.value]
 
 # Variables
-MOI.getattribute(m::AbstractInstance, ::MOI.NumberOfVariables) = m.nvars
+MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = m.nvars
 MOI.addvariable!(m::AbstractInstance) = MOI.VariableReference(m.nvars += 1)
 function MOI.addvariables!(m::AbstractInstance, n::Integer)
     [MOI.addvariable!(m) for i in 1:n]
@@ -92,13 +92,13 @@ end
 MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
 
 # Objective
-MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
-function MOI.setattribute!(m::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
+MOI.get(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
+function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
     # f needs to be copied, see #2
     m.objective = deepcopy(f)
 end
-MOI.getattribute(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
-function MOI.setattribute!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
+MOI.get(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
+function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
     m.sense = sense
 end
 
@@ -128,31 +128,31 @@ function MOI.modifyconstraint!(m::AbstractInstance, cr::CR, change)
     _modifyconstraint!(m, cr, getconstrloc(m, cr), change)
 end
 
-MOI.getattribute(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
+MOI.get(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
 
-function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraints)
+function MOI.get(m::AbstractInstance, loc::MOI.ListOfConstraints)
     broadcastvcat(_getloc, m)
 end
 
-function MOI.getattribute(m::AbstractInstance, loc::MOI.ListOfConstraintReferences)
+function MOI.get(m::AbstractInstance, loc::MOI.ListOfConstraintReferences)
     broadcastvcat(constrs -> _getlocr(constrs, loc), m)
 end
 
-MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
+MOI.canget(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                                  MOI.NumberOfConstraints,
                                                  MOI.ListOfConstraints,
                                                  MOI.ListOfConstraintReferences,
                                                  MOI.ObjectiveFunction,
                                                  MOI.ObjectiveSense}) = true
 
-MOI.cangetattribute(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
+MOI.canget(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
                                                  MOI.ConstraintSet}, ref::MOI.AnyReference) = true
 
-function MOI.getattribute(m::AbstractInstance, ::MOI.ConstraintFunction, cr::CR)
+function MOI.get(m::AbstractInstance, ::MOI.ConstraintFunction, cr::CR)
     _getfunction(m, cr, getconstrloc(m, cr))
 end
 
-function MOI.getattribute(m::AbstractInstance, ::MOI.ConstraintSet, cr::CR)
+function MOI.get(m::AbstractInstance, ::MOI.ConstraintSet, cr::CR)
     _getset(m, cr, getconstrloc(m, cr))
 end
 
