@@ -10,6 +10,12 @@ MOIU.@instance(Instance,
                (VectorOfVariables,),
                (VectorAffineFunction, VectorQuadraticFunction))
 
+include(joinpath(Pkg.dir("MathOptInterface"), "test", "instance.jl"))
+
+@testset "Name test" begin
+    nametest(Instance{Float64}())
+end
+
 # Taken from MOI/test/contlinear.jl
 @testset "Basic solve, query, resolve" begin
     # simple 2 variable, 1 constraint problem

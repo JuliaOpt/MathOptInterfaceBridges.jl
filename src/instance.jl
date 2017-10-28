@@ -1,6 +1,8 @@
 const MOIU = MathOptInterfaceUtilities
 const C{F, S} = Tuple{CR{F, S}, F, S}
 
+const EMPTYSTRING = ""
+
 # Implementation of MOI for vector of constraint
 function _addconstraint!{F, S}(constrs::Vector{C{F, S}}, cr::CR, f::F, s::S)
     push!(constrs, (cr, f, s))
@@ -87,9 +89,36 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
     for cr in rm
         MOI.delete!(m, cr)
     end
+    if haskey(m.varnames, vr.value)
+        delete!(m.namesvar, m.varnames[vr.value])
+        delete!(m.varnames, vr.value)
+    end
 end
 
 MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
+
+# Names
+MOI.canset(m::AbstractInstance, ::MOI.VariableName, ::VR) = true
+function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vr::VR, name::String)
+    m.varnames[vr.value] = name
+    m.namesvar[name] = vr
+end
+MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::VR) = true
+MOI.get(m::AbstractInstance, ::MOI.VariableName, vr::VR) = get(m.varnames, vr.value, EMPTYSTRING)
+
+MOI.canget(m::AbstractInstance, ::Type{VR}, name::String) = haskey(m.namesvar, name)
+MOI.get(m::AbstractInstance, ::Type{VR}, name::String) = m.namesvar[name]
+
+MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::CR) = true
+function MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, cr::CR, name::String)
+    m.connames[cr.value] = name
+    m.namescon[name] = cr
+end
+MOI.canget(m::AbstractInstance, ::MOI.ConstraintName, ::CR) = true
+MOI.get(m::AbstractInstance, ::MOI.ConstraintName, cr::CR) = get(m.connames, cr.value, EMPTYSTRING)
+
+MOI.canget(m::AbstractInstance, ::Type{<:CR}, name::String) = haskey(m.namescon, name)
+MOI.get(m::AbstractInstance, ::Type{<:CR}, name::String) = m.namescon[name]
 
 # Objective
 MOI.get(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
@@ -121,6 +150,10 @@ function MOI.delete!(m::AbstractInstance, cr::CR)
         m.constrmap[cr_next.value] -= 1
     end
     m.constrmap[cr.value] = 0
+    if haskey(m.connames, cr.value)
+        delete!(m.namescon, m.connames[cr.value])
+        delete!(m.connames, cr.value)
+    end
 end
 
 MOI.canmodifyconstraint(m::AbstractInstance, cr::CR, change) = true
@@ -270,6 +303,8 @@ mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
     objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
     nvars::UInt64
+    varnames::Dict{UInt64, String}
+    namesvar::Dict{String, UInt64}
     nconstrs::UInt64
     constrmap::Vector{Int}
     singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
@@ -305,7 +340,11 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             sense::MathOptInterface.OptimizationSense
             objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
             nvars::UInt64
+            varnames::Dict{UInt64, String}
+            namesvar::Dict{String, MOI.VariableReference}
             nconstrs::UInt64
+            connames::Dict{UInt64, String}
+            namescon::Dict{String, MOI.ConstraintReference}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
         end
     end
@@ -372,7 +411,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
-                   0, 0, Int[],
+                   0, Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
+                   0, Dict{UInt64, String}(), Dict{String, MOI.ConstraintReference}(), Int[],
                    $(_getCV.(funs)...))
         end
 
