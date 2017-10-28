@@ -1,3 +1,5 @@
+using Base.Test
+
 # Define conversion VectorOfVariable -> VectorAffineFunction{T}
 function MOI.VectorAffineFunction{T}(f::MOI.VectorOfVariables) where T
     n = length(f.variables)
@@ -144,6 +146,9 @@ function _isapprox(vars1, coeffs1, vars2, coeffs2; kwargs...)
     return true
 end
 
+Base.isapprox(f1::MOI.SingleVariable, f2::MOI.SingleVariable; kwargs...) = f1.variable == f2.variable
+Base.isapprox(f1::MOI.VectorOfVariables, f2::MOI.VectorOfVariables; kwargs...) = f1.variables == f2.variables
+
 function Base.isapprox(f1::MOI.VectorAffineFunction, f2::MOI.VectorAffineFunction; kwargs...)
     f1 = canonical(f1)
     f2 = canonical(f2)
@@ -197,6 +202,92 @@ function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadrat
         quad_d1[vars] = get(quad_d1,vars,zero(T)) - coef
     end
     return isapprox([c2-c1;collect(values(aff_d1));collect(values(quad_d1))], zeros(T,length(quad_d1)+length(aff_d1)+1); kwargs...)
+end
+
+function test_variablenames_equal(instance, variablenames)
+    seen_name = Dict(name => false for name in variablenames)
+    for ref in MOI.get(instance, MOI.ListOfVariableReferences())
+        vname = MOI.get(instance, MOI.VariableName(), ref)
+        if !haskey(seen_name, vname)
+            error("Variable with name $vname present in instance but not expected list of variable names.")
+        end
+        if seen_name[vname]
+            error("Variable with name $vname present twice in instance (shouldn't happen!)")
+        end
+        seen_name[vname] = true
+    end
+    for (vname,seen) in seen_name
+        if !seen
+            error("Did not find variable with name $vname in intance.")
+        end
+    end
+end
+function test_constraintnames_equal(instance, constraintnames)
+    seen_name = Dict(name => false for name in constraintnames)
+    for (F,S) in MOI.get(instance, MOI.ListOfConstraints())
+        for ref in MOI.get(instance, MOI.ListOfConstraintReferences{F,S}())
+            cname = MOI.get(instance, MOI.ConstraintName(), ref)
+            if !haskey(seen_name, cname)
+                error("Constraint with name $cname present in instance but not expected list of constraint names.")
+            end
+            if seen_name[cname]
+                error("Constraint with name $cname present twice in instance (shouldn't happen!)")
+            end
+            seen_name[cname] = true
+        end
+    end
+    for (cname,seen) in seen_name
+        if !seen
+            error("Did not find constraint with name $cname in intance.")
+        end
+    end
+end
+
+map_variables(f::Vector{MOI.VariableReference}, variablemap::Dict{MOI.VariableReference,MOI.VariableReference}) = map(v -> variablemap[v], f)
+map_variables(f, variablemap) = f
+
+
+for moiname in [MOI.ScalarAffineFunction,MOI.VectorAffineFunction,
+                 MOI.ScalarQuadraticFunction,MOI.VectorQuadraticFunction,
+                 MOI.SingleVariable,MOI.VectorOfVariables]
+    fields = fieldnames(moiname)
+    constructor = Expr(:call, moiname, [Expr(:call,:map_variables,Expr(:.,:f,Base.Meta.quot(field)),:variablemap) for field in fields]...)
+    @eval map_variables(f::$moiname, variablemap::Dict{MOI.VariableReference,MOI.VariableReference}) = $constructor
+end
+
+"""
+    test_instances_equal(instance1::AbstractInstance, instance2::AbstractInstance, variablenames::Vector{String}, constraintnames::Vector{String})
+
+Test that `instance1` and `instance2` are identical using `variablenames` as as keys for the variable names and `constraintnames` as keys for the constraint names. Uses `Base.Test` macros.
+"""
+function test_instances_equal(instance1::MOI.AbstractInstance, instance2::MOI.AbstractInstance, variablenames::Vector{String}, constraintnames::Vector{String})
+    # TODO: give test-friendly feedback instead of errors?
+    test_variablenames_equal(instance1, variablenames)
+    test_variablenames_equal(instance2, variablenames)
+    test_constraintnames_equal(instance1, constraintnames)
+    test_constraintnames_equal(instance2, constraintnames)
+
+    variablemap_2to1 = Dict{MOI.VariableReference,MOI.VariableReference}()
+    for vname in variablenames
+        ref1 = MOI.get(instance1, MOI.VariableReference, vname)
+        ref2 = MOI.get(instance2, MOI.VariableReference, vname)
+        variablemap_2to1[ref2] = ref1
+    end
+
+    for cname in constraintnames
+        ref1 = MOI.get(instance1, MOI.ConstraintReference, cname)
+        ref2 = MOI.get(instance2, MOI.ConstraintReference, cname)
+        f1 = MOI.get(instance1, MOI.ConstraintFunction(), ref1)
+        f2 = MOI.get(instance2, MOI.ConstraintFunction(), ref2)
+        s1 = MOI.get(instance1, MOI.ConstraintSet(), ref1)
+        s2 = MOI.get(instance2, MOI.ConstraintSet(), ref2)
+        @test isapprox(f1, map_variables(f2, variablemap_2to1))
+        @test s1 == s2
+    end
+    obj1 = MOI.get(instance1, MOI.ObjectiveFunction())
+    obj2 = MOI.get(instance2, MOI.ObjectiveFunction())
+    @test isapprox(obj1, map_variables(obj2, variablemap_2to1))
+    @test MOI.get(instance1, MOI.ObjectiveSense()) == MOI.get(instance2, MOI.ObjectiveSense())
 end
 
 

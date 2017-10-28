@@ -18,5 +18,6 @@ include("functions.jl")
 include("sets.jl")
 
 include("instance.jl")
+include("parser.jl")
 
 end # module
