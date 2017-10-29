@@ -108,7 +108,7 @@ function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionM
 end
 
 # Constraints
-function MOI.addconstraint!{F, S}(m::AbstractInstance, f::F, s::S)
+function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     cr = CR{F, S}(m.nconstrs += 1)
     # f needs to be copied, see #2
     push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), deepcopy(s)))
