@@ -48,7 +48,7 @@ abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 getconstrloc(m::AbstractInstance, cr::CR) = m.constrmap[cr.value]
 
 # Variables
-MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = m.nvars
+MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = length(m.varrefs)
 function MOI.addvariable!(m::AbstractInstance)
     v = MOI.VariableReference(m.nvars += 1)
     push!(m.varrefs, v)
@@ -93,7 +93,7 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
     for cr in rm
         MOI.delete!(m, cr)
     end
-    splice!(m.varrefs, vf)
+    splice!(m.varrefs, findfirst(m.varrefs, vr))
     if haskey(m.varnames, vr.value)
         delete!(m.namesvar, m.varnames[vr.value])
         delete!(m.varnames, vr.value)
@@ -101,7 +101,10 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
 end
 
 MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
-MOI.isvalid(m::AbstractInstance, vr::MOI.VariableReference) = in(vf, m.varrefs)
+MOI.isvalid(m::AbstractInstance, vr::MOI.VariableReference) = in(vr, m.varrefs)
+
+MOI.get(m::AbstractInstance, ::MOI.ListOfVariableReferences) = m.varrefs
+MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableReferences) = true
 
 # Names
 MOI.canset(m::AbstractInstance, ::MOI.VariableName, vr::VR) = MOI.isvalid(m, vr)
@@ -419,7 +422,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
-                   MOI.VariableReference[], 0, Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
+                   0, MOI.VariableReference[], Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
                    0, Dict{UInt64, String}(), Dict{String, MOI.ConstraintReference}(), Int[],
                    $(_getCV.(funs)...))
         end
