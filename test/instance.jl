@@ -28,6 +28,8 @@ end
     v = MOI.addvariables!(m, 2)
     @test MOI.get(m, MOI.NumberOfVariables()) == 2
 
+    @test MOI.get(m, MOI.ListOfVariableReferences()) == v
+
     cf = MOI.ScalarAffineFunction(v, [1.0,1.0], 0.0)
     c = MOI.addconstraint!(m, cf, MOI.LessThan(1.0))
     @test MOI.get(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.LessThan{Float64}}()) == 1
