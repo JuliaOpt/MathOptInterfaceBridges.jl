@@ -50,7 +50,7 @@ getconstrloc(m::AbstractInstance, cr::CR) = m.constrmap[cr.value]
 # Variables
 MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = length(m.varrefs)
 function MOI.addvariable!(m::AbstractInstance)
-    v = MOI.VariableReference(m.nvars += 1)
+    v = MOI.VariableReference(m.nextvariableid += 1)
     push!(m.varrefs, v)
     v
 end
@@ -147,7 +147,7 @@ end
 
 # Constraints
 function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    cr = CR{F, S}(m.nconstrs += 1)
+    cr = CR{F, S}(m.nextconstraintid += 1)
     # f needs to be copied, see #2
     push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), deepcopy(s)))
     cr
@@ -311,11 +311,11 @@ end
 mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
     objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
-    nvars::UInt64
+    nextvariableid::UInt64
     varrefs::Vector{MOI.VariableReference}
     varnames::Dict{UInt64, String}
     namesvar::Dict{String, UInt64}
-    nconstrs::UInt64
+    nextconstraintid::UInt64
     constrmap::Vector{Int}
     singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
     scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
@@ -349,11 +349,11 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         mutable struct $instancename{T} <: MathOptInterfaceUtilities.AbstractInstance{T}
             sense::MathOptInterface.OptimizationSense
             objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
-            nvars::UInt64
+            nextvariableid::UInt64
             varrefs::Vector{MOI.VariableReference}
             varnames::Dict{UInt64, String}
             namesvar::Dict{String, MOI.VariableReference}
-            nconstrs::UInt64
+            nextconstraintid::UInt64
             connames::Dict{UInt64, String}
             namescon::Dict{String, MOI.ConstraintReference}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
