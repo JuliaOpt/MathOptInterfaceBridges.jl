@@ -93,7 +93,7 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
     for cr in rm
         MOI.delete!(m, cr)
     end
-    splice!(m.varrefs, findfirst(m.varrefs, vr))
+    delete!(m.varrefs, vr)
     if haskey(m.varnames, vr.value)
         delete!(m.namesvar, m.varnames[vr.value])
         delete!(m.varnames, vr.value)
@@ -103,7 +103,7 @@ end
 MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
 MOI.isvalid(m::AbstractInstance, vr::MOI.VariableReference) = in(vr, m.varrefs)
 
-MOI.get(m::AbstractInstance, ::MOI.ListOfVariableReferences) = m.varrefs
+MOI.get(m::AbstractInstance, ::MOI.ListOfVariableReferences) = collect(m.varrefs)
 MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableReferences) = true
 
 # Names
@@ -350,7 +350,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             sense::MathOptInterface.OptimizationSense
             objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
             nextvariableid::UInt64
-            varrefs::Vector{MOI.VariableReference}
+            varrefs::Set{MOI.VariableReference}
             varnames::Dict{UInt64, String}
             namesvar::Dict{String, MOI.VariableReference}
             nextconstraintid::UInt64
@@ -422,7 +422,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
-                   0, MOI.VariableReference[], Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
+                   0, Set{MOI.VariableReference}(), Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
                    0, Dict{UInt64, String}(), Dict{String, MOI.ConstraintReference}(), Int[],
                    $(_getCV.(funs)...))
         end

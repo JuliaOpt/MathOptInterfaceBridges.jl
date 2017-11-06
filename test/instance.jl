@@ -28,7 +28,8 @@ end
     v = MOI.addvariables!(m, 2)
     @test MOI.get(m, MOI.NumberOfVariables()) == 2
     @test MOI.canget(m, MOI.ListOfVariableReferences())
-    @test MOI.get(m, MOI.ListOfVariableReferences()) == v
+    vrs = MOI.get(m, MOI.ListOfVariableReferences())
+    @test vrs == v || vrs == reverse(v)
 
     cf = MOI.ScalarAffineFunction(v, [1.0,1.0], 0.0)
     c = MOI.addconstraint!(m, cf, MOI.LessThan(1.0))
@@ -160,6 +161,9 @@ end
     @test f.variables == [v[2], z]
     @test f.coefficients == [-1.0, 0.0]
 
+    @test MOI.canget(m, MOI.ListOfVariableReferences())
+    vrs = MOI.get(m, MOI.ListOfVariableReferences())
+    @test vrs == [v[2], z] || vrs == [z, v[2]]
     @test MOI.get(m, MOI.ObjectiveFunction()) ≈ MOI.ScalarAffineFunction([v[2], z], [2.0, 0.0], 0.0)
 
 end
