@@ -27,6 +27,8 @@ end
 
     v = MOI.addvariables!(m, 2)
     @test MOI.get(m, MOI.NumberOfVariables()) == 2
+    @test MOI.canget(m, MOI.ListOfVariableReferences())
+    @test MOI.get(m, MOI.ListOfVariableReferences()) == v
 
     cf = MOI.ScalarAffineFunction(v, [1.0,1.0], 0.0)
     c = MOI.addconstraint!(m, cf, MOI.LessThan(1.0))
@@ -86,7 +88,10 @@ end
     vc3 = MOI.addconstraint!(m, MOI.SingleVariable(v[3]), MOI.GreaterThan(0.0))
     @test MOI.get(m, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.GreaterThan{Float64}}()) == 3
 
+    @test MOI.canmodifyconstraint(m, c, MOI.ScalarCoefficientChange{Float64}(z, 1.0))
     MOI.modifyconstraint!(m, c, MOI.ScalarCoefficientChange{Float64}(z, 1.0))
+
+    @test MOI.canmodifyobjective(m, MOI.ScalarCoefficientChange{Float64}(z, 2.0))
     MOI.modifyobjective!(m, MOI.ScalarCoefficientChange{Float64}(z, 2.0))
 
     @test MOI.get(m, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64},MOI.LessThan{Float64}}()) == 1

@@ -48,8 +48,12 @@ abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 getconstrloc(m::AbstractInstance, cr::CR) = m.constrmap[cr.value]
 
 # Variables
-MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = m.nvars
-MOI.addvariable!(m::AbstractInstance) = MOI.VariableReference(m.nvars += 1)
+MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = length(m.varrefs)
+function MOI.addvariable!(m::AbstractInstance)
+    v = MOI.VariableReference(m.nextvariableid += 1)
+    push!(m.varrefs, v)
+    v
+end
 function MOI.addvariables!(m::AbstractInstance, n::Integer)
     [MOI.addvariable!(m) for i in 1:n]
 end
@@ -89,6 +93,7 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
     for cr in rm
         MOI.delete!(m, cr)
     end
+    splice!(m.varrefs, findfirst(m.varrefs, vr))
     if haskey(m.varnames, vr.value)
         delete!(m.namesvar, m.varnames[vr.value])
         delete!(m.varnames, vr.value)
@@ -96,9 +101,13 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableReference)
 end
 
 MOI.isvalid(m::AbstractInstance, cr::MOI.ConstraintReference) = !iszero(m.constrmap[cr.value])
+MOI.isvalid(m::AbstractInstance, vr::MOI.VariableReference) = in(vr, m.varrefs)
+
+MOI.get(m::AbstractInstance, ::MOI.ListOfVariableReferences) = m.varrefs
+MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableReferences) = true
 
 # Names
-MOI.canset(m::AbstractInstance, ::MOI.VariableName, ::VR) = true
+MOI.canset(m::AbstractInstance, ::MOI.VariableName, vr::VR) = MOI.isvalid(m, vr)
 function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vr::VR, name::String)
     m.varnames[vr.value] = name
     m.namesvar[name] = vr
@@ -138,13 +147,13 @@ end
 
 # Constraints
 function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    cr = CR{F, S}(m.nconstrs += 1)
+    cr = CR{F, S}(m.nextconstraintid += 1)
     # f needs to be copied, see #2
     push!(m.constrmap, _addconstraint!(m, cr, deepcopy(f), deepcopy(s)))
     cr
 end
 
-MOI.candelete(m::AbstractInstance, cr::Union{CR, VR}) = true
+MOI.candelete(m::AbstractInstance, cr::Union{CR, VR}) = MOI.isvalid(m, cr)
 function MOI.delete!(m::AbstractInstance, cr::CR)
     for (cr_next, _, _) in _delete!(m, cr, getconstrloc(m, cr))
         m.constrmap[cr_next.value] -= 1
@@ -302,10 +311,11 @@ end
 mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
     objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
-    nvars::UInt64
+    nextvariableid::UInt64
+    varrefs::Vector{MOI.VariableReference}
     varnames::Dict{UInt64, String}
     namesvar::Dict{String, UInt64}
-    nconstrs::UInt64
+    nextconstraintid::UInt64
     constrmap::Vector{Int}
     singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
     scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
@@ -339,10 +349,11 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         mutable struct $instancename{T} <: MathOptInterfaceUtilities.AbstractInstance{T}
             sense::MathOptInterface.OptimizationSense
             objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
-            nvars::UInt64
+            nextvariableid::UInt64
+            varrefs::Vector{MOI.VariableReference}
             varnames::Dict{UInt64, String}
             namesvar::Dict{String, MOI.VariableReference}
-            nconstrs::UInt64
+            nextconstraintid::UInt64
             connames::Dict{UInt64, String}
             namescon::Dict{String, MOI.ConstraintReference}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
@@ -411,7 +422,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
-                   0, Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
+                   0, MOI.VariableReference[], Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
                    0, Dict{UInt64, String}(), Dict{String, MOI.ConstraintReference}(), Int[],
                    $(_getCV.(funs)...))
         end
