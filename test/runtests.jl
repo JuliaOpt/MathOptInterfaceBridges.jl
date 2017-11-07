@@ -9,3 +9,4 @@ const MOI = MathOptInterface
 include("functions.jl")
 include("sets.jl")
 include("instance.jl")
+include("parser.jl")
