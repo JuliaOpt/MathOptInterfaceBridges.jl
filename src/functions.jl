@@ -6,19 +6,45 @@ function MOI.VectorAffineFunction{T}(f::MOI.VectorOfVariables) where T
     MOI.VectorAffineFunction(collect(1:n), f.variables, ones(T, n), zeros(T, n))
 end
 
+# Implements iterator interface
+struct ScalarFunctionIterator{F<:MOI.AbstractVectorFunction}
+    f::F
+end
+eachscalar(f::MOI.AbstractVectorFunction) = ScalarFunctionIterator(f)
+Base.start(it::ScalarFunctionIterator) = 1
+Base.done(it::ScalarFunctionIterator, state) = state > length(it)
+Base.next(it::ScalarFunctionIterator, state) = (it[state], state+1)
+Base.length(it::ScalarFunctionIterator{MOI.VectorOfVariables}) = length(it.f.variables)
+Base.length(it::ScalarFunctionIterator{<:Union{MOI.VectorAffineFunction, MOI.VectorQuadraticFunction}}) = length(it.f.constant)
+Base.eltype(it::ScalarFunctionIterator{MOI.VectorOfVariables}) = MOI.SingleVariable
+Base.eltype(it::ScalarFunctionIterator{MOI.VectorAffineFunction{T}}) where T = MOI.ScalarAffineFunction{T}
+Base.eltype(it::ScalarFunctionIterator{MOI.VectorQuadraticFunction{T}}) where T = MOI.ScalarQuadraticFunction{T}
+Base.endof(it::ScalarFunctionIterator) = length(it)
+
 # Define getindex for Vector functions
-function Base.getindex(f::MOI.VectorAffineFunction, i::Integer)
+
+Base.getindex(it::ScalarFunctionIterator{MOI.VectorOfVariables}, i::Integer) = MOI.SingleVariable(it.f.variables[i])
+function Base.getindex(it::ScalarFunctionIterator{<:MOI.VectorAffineFunction}, i::Integer)
+    f = it.f
     I = find(oi -> oi == i, f.outputindex)
     MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant[i])
 end
+function Base.getindex(it::ScalarFunctionIterator{<:MOI.VectorQuadraticFunction}, i::Integer)
+    f = it.f
+    aI = find(oi -> oi == i, f.affine_outputindex)
+    qI = find(oi -> oi == i, f.quadratic_outputindex)
+    MOI.ScalarQuadraticFunction(f.affine_variables[aI], f.affine_coefficients[aI],
+                                f.quadratic_rowvariables[qI], f.quadratic_colvariables[qI], f.quadratic_coefficients[qI],
+                                f.constant[i])
+end
 
-function Base.getindex(f::MOI.VectorAffineFunction{T}, I::AbstractVector) where T
+function Base.getindex(it::ScalarFunctionIterator{MOI.VectorAffineFunction{T}}, I::AbstractVector) where T
     outputindex = Int[]
     variables = VR[]
     coefficients = T[]
     constant = Vector{T}(length(I))
     for (i, j) in enumerate(I)
-        g = f[j]
+        g = it[j]
         append!(outputindex, repmat(i:i, length(g.variables)))
         append!(variables, g.variables)
         append!(coefficients, g.coefficients)
