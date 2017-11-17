@@ -19,35 +19,37 @@
     end
     @testset "Iteration and indexing on VectorOfVariables" begin
         f = MOI.VectorOfVariables([z, w, x, y])
-        @test length(f) == 4
-        @test eltype(f) == MOI.SingleVariable
-        @test collect(MOIU.eachscalar(f)) == [MOI.SingleVariable(z), MOI.SingleVariable(w), MOI.SingleVariable(x), MOI.SingleVariable(y)]
-        @test f[2] == MOI.SingleVariable(w)
-        @test f[end] == MOI.SingleVariable(y)
+        it = MOIU.eachscalar(f)
+        @test length(it) == 4
+        @test eltype(it) == MOI.SingleVariable
+        @test collect(it) == [MOI.SingleVariable(z), MOI.SingleVariable(w), MOI.SingleVariable(x), MOI.SingleVariable(y)]
+        @test it[2] == MOI.SingleVariable(w)
+        @test it[end] == MOI.SingleVariable(y)
     end
     @testset "Indexing on VectorAffineFunction" begin
         f = MOI.VectorAffineFunction([2, 1, 3, 2, 2, 1, 3, 1, 2],
                                      [x, y, z, z, y, z, x, x, y],
                                      [1, 7, 2, 9, 3, 1, 6, 4, 1],
                                      [2, 7, 5])
-        @test length(f) == 3
-        @test eltype(f) == MOI.ScalarAffineFunction{Int}
-        g = f[2]
+        it = MOIU.eachscalar(f)
+        @test length(it) == 3
+        @test eltype(it) == MOI.ScalarAffineFunction{Int}
+        g = it[2]
         @test g isa MOI.ScalarAffineFunction
         @test g.variables    == [x, z, y, y]
         @test g.coefficients == [1, 9, 3, 1]
         @test g.constant == 7
-        g = f[1]
+        g = it[1]
         @test g isa MOI.ScalarAffineFunction
         @test g.variables    == [y, z, x]
         @test g.coefficients == [7, 1, 4]
         @test g.constant == 2
-        g = f[end]
+        g = it[end]
         @test g isa MOI.ScalarAffineFunction
         @test g.variables    == [z, x]
         @test g.coefficients == [2, 6]
         @test g.constant == 5
-        h = f[[3, 1]]
+        h = it[[3, 1]]
         @test h isa MOI.VectorAffineFunction
         @test h.outputindex  == [1, 1, 2, 2, 2]
         @test h.variables    == [z, x, y, z, x]
@@ -63,9 +65,10 @@
                                         [y, z, z, y],
                                         [1, 6, 4, 3],
                                         [2, 7, 5])
-        @test length(f) == 3
-        @test eltype(f) == MOI.ScalarQuadraticFunction{Int}
-        g = f[2]
+        it = MOIU.eachscalar(f)
+        @test length(it) == 3
+        @test eltype(it) == MOI.ScalarQuadraticFunction{Int}
+        g = it[2]
         @test g isa MOI.ScalarQuadraticFunction
         @test g.affine_variables    == [x, z, y]
         @test g.affine_coefficients == [1, 9, 3]
@@ -73,7 +76,7 @@
         @test g.quadratic_colvariables == [y, y]
         @test g.quadratic_coefficients == [1, 3]
         @test g.constant == 7
-        g = f[end]
+        g = it[end]
         @test g isa MOI.ScalarQuadraticFunction
         @test g.affine_variables    == [z]
         @test g.affine_coefficients == [2]
