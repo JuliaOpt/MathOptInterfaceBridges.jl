@@ -21,7 +21,7 @@
         f = MOI.VectorOfVariables([z, w, x, y])
         @test length(f) == 4
         @test eltype(f) == MOI.SingleVariable
-        @test collect(f) == [MOI.SingleVariable(z), MOI.SingleVariable(w), MOI.SingleVariable(x), MOI.SingleVariable(y)]
+        @test collect(MOIU.eachscalar(f)) == [MOI.SingleVariable(z), MOI.SingleVariable(w), MOI.SingleVariable(x), MOI.SingleVariable(y)]
         @test f[2] == MOI.SingleVariable(w)
         @test f[end] == MOI.SingleVariable(y)
     end
