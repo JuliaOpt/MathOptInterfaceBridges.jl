@@ -6,10 +6,29 @@ function MOI.VectorAffineFunction{T}(f::MOI.VectorOfVariables) where T
     MOI.VectorAffineFunction(collect(1:n), f.variables, ones(T, n), zeros(T, n))
 end
 
+# Implements iterator interface
+Base.start(f::MOI.AbstractVectorFunction) = 1
+Base.done(f::MOI.AbstractVectorFunction, state) = state > length(f)
+Base.next(f::MOI.AbstractVectorFunction, state) = (f[state], state+1)
+Base.length(f::MOI.VectorOfVariables) = length(f.variables)
+Base.length(f::Union{MOI.VectorAffineFunction, MOI.VectorQuadraticFunction}) = length(f.constant)
+Base.endof(f::MOI.AbstractVectorFunction) = length(f)
+Base.eltype(f::MOI.VectorOfVariables) = MOI.SingleVariable
+Base.eltype(f::MOI.VectorAffineFunction{T}) where T = MOI.ScalarAffineFunction{T}
+Base.eltype(f::MOI.VectorQuadraticFunction{T}) where T = MOI.ScalarQuadraticFunction{T}
+
 # Define getindex for Vector functions
+Base.getindex(f::MOI.VectorOfVariables, i::Integer) = MOI.SingleVariable(f.variables[i])
 function Base.getindex(f::MOI.VectorAffineFunction, i::Integer)
     I = find(oi -> oi == i, f.outputindex)
     MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant[i])
+end
+function Base.getindex(f::MOI.VectorQuadraticFunction, i::Integer)
+    aI = find(oi -> oi == i, f.affine_outputindex)
+    qI = find(oi -> oi == i, f.quadratic_outputindex)
+    MOI.ScalarQuadraticFunction(f.affine_variables[aI], f.affine_coefficients[aI],
+                                f.quadratic_rowvariables[qI], f.quadratic_colvariables[qI], f.quadratic_coefficients[qI],
+                                f.constant[i])
 end
 
 function Base.getindex(f::MOI.VectorAffineFunction{T}, I::AbstractVector) where T

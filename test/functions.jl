@@ -17,11 +17,21 @@
         @test all(f.coefficients .== 1)
         @test all(iszero.(f.constant))
     end
-    @testset "getindex on VectorAffineFunction" begin
+    @testset "Iteration and indexing on VectorOfVariables" begin
+        f = MOI.VectorOfVariables([z, w, x, y])
+        @test length(f) == 4
+        @test eltype(f) == MOI.SingleVariable
+        @test collect(f) == [MOI.SingleVariable(z), MOI.SingleVariable(w), MOI.SingleVariable(x), MOI.SingleVariable(y)]
+        @test f[2] == MOI.SingleVariable(w)
+        @test f[end] == MOI.SingleVariable(y)
+    end
+    @testset "Indexing on VectorAffineFunction" begin
         f = MOI.VectorAffineFunction([2, 1, 3, 2, 2, 1, 3, 1, 2],
                                      [x, y, z, z, y, z, x, x, y],
                                      [1, 7, 2, 9, 3, 1, 6, 4, 1],
                                      [2, 7, 5])
+        @test length(f) == 3
+        @test eltype(f) == MOI.ScalarAffineFunction{Int}
         g = f[2]
         @test g isa MOI.ScalarAffineFunction
         @test g.variables    == [x, z, y, y]
@@ -32,12 +42,45 @@
         @test g.variables    == [y, z, x]
         @test g.coefficients == [7, 1, 4]
         @test g.constant == 2
+        g = f[end]
+        @test g isa MOI.ScalarAffineFunction
+        @test g.variables    == [z, x]
+        @test g.coefficients == [2, 6]
+        @test g.constant == 5
         h = f[[3, 1]]
         @test h isa MOI.VectorAffineFunction
         @test h.outputindex  == [1, 1, 2, 2, 2]
         @test h.variables    == [z, x, y, z, x]
         @test h.coefficients == [2, 6, 7, 1, 4]
         @test h.constant == [5, 2]
+    end
+    @testset "Indexing on VectorQuadraticFunction" begin
+        f = MOI.VectorQuadraticFunction([2, 1, 3, 2, 2],
+                                        [x, y, z, z, y],
+                                        [1, 7, 2, 9, 3],
+                                        [2, 3, 1, 2],
+                                        [z, x, x, y],
+                                        [y, z, z, y],
+                                        [1, 6, 4, 3],
+                                        [2, 7, 5])
+        @test length(f) == 3
+        @test eltype(f) == MOI.ScalarQuadraticFunction{Int}
+        g = f[2]
+        @test g isa MOI.ScalarQuadraticFunction
+        @test g.affine_variables    == [x, z, y]
+        @test g.affine_coefficients == [1, 9, 3]
+        @test g.quadratic_rowvariables == [z, y]
+        @test g.quadratic_colvariables == [y, y]
+        @test g.quadratic_coefficients == [1, 3]
+        @test g.constant == 7
+        g = f[end]
+        @test g isa MOI.ScalarQuadraticFunction
+        @test g.affine_variables    == [z]
+        @test g.affine_coefficients == [2]
+        @test g.quadratic_rowvariables == [x]
+        @test g.quadratic_colvariables == [z]
+        @test g.quadratic_coefficients == [6]
+        @test g.constant == 5
     end
     @testset "Variablewise constraint copy" begin
         f = MOI.SingleVariable(x)
