@@ -282,7 +282,7 @@ _callfield(f, s::SymbolFS) = :($f(m.$(_field(s))))
 _broadcastfield(b, s::SymbolFS) = :($b(f, m.$(_field(s))))
 
 """
-    macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets, scalarfunctions, vectorfunctions)
+    macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets, scalarfunctions, scalarfunctionstyped, vectorfunctions, vectorfunctionstyped)
 
 Creates a type Instance implementing the MOI instance interface and containing `scalarsets` scalar sets `typedscalarsets` typed scalar sets, `vectorsets` vector sets, `typedvectorsets` typed vector sets, `scalarfunctions` scalar functions and `vectorfunctions` vector functions.
 To give no set/function, write `()`, to give one set `S`, write `(S,)`.
@@ -290,7 +290,7 @@ To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 ### Examples
 
 The instance describing an linear program would be:
-```
+```julia
 @instance LPInstance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
 ```
 
