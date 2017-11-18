@@ -10,10 +10,11 @@ MOIU.@instance(Instance,
                (VectorOfVariables,),
                (VectorAffineFunction, VectorQuadraticFunction))
 
-include(joinpath(Pkg.dir("MathOptInterface"), "test", "instance.jl"))
+using MathOptInterfaceTests
+const MOIT = MathOptInterfaceTests
 
 @testset "Name test" begin
-    nametest(Instance{Float64}())
+    MOIT.nametest(Instance{Float64}())
 end
 
 # Taken from MOI/test/contlinear.jl

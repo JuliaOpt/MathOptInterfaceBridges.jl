@@ -4,6 +4,8 @@ module MathOptInterfaceUtilities
 using MathOptInterface
 const MOI = MathOptInterface
 
+const MOIU = MathOptInterfaceUtilities # used in macro
+
 const SVF = MOI.SingleVariable
 const VVF = MOI.VectorOfVariables
 const SAF{T} = MOI.ScalarAffineFunction{T}
@@ -19,5 +21,8 @@ include("sets.jl")
 
 include("instance.jl")
 include("parser.jl")
+
+include("intervalbridge.jl")
+include("bridge.jl")
 
 end # module
