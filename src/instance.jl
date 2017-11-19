@@ -181,11 +181,11 @@ function MOI.get(m::AbstractInstance, loc::MOI.ListOfConstraintReferences)
 end
 
 MOI.canget(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
-                                                 MOI.NumberOfConstraints,
-                                                 MOI.ListOfConstraints,
-                                                 MOI.ListOfConstraintReferences,
-                                                 MOI.ObjectiveFunction,
-                                                 MOI.ObjectiveSense}) = true
+                                        MOI.NumberOfConstraints,
+                                        MOI.ListOfConstraints,
+                                        MOI.ListOfConstraintReferences,
+                                        MOI.ObjectiveFunction,
+                                        MOI.ObjectiveSense}) = true
 
 MOI.canget(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
                                                  MOI.ConstraintSet}, ref::MOI.AnyReference) = true
