@@ -1,5 +1,28 @@
 export @bridge
 
+abstract type AbstractBridge end
+
+"""
+    MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
+
+The number of constraints of the type `F`-in-`S` created by the bridge `b` in the instance.
+"""
+MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
+"""
+    MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
+
+A `Vector{ConstraintReferences{F,S}}` with references to all constraints of
+type `F`-in`S` created by the bride `b` in the instance (i.e., of length equal to the value of `NumberOfConstraints{F,S}()`).
+"""
+MOI.get(b::AbstractBridge, ::MOI.ListOfConstraintReferences{F, S}) where {F, S} = CR{F, S}[]
+
+"""
+    MOI.candelete(instance::MOI.AbstractInstance, b::AbstractBridge)
+
+Return a `Bool` indicating whether the bridge `b` can be removed from the instance `instance`.
+"""
+MOI.candelete(instance::MOI.AbstractInstance, c::AbstractBridge) = true
+
 const InstanceConstraintAttribute = Union{MOI.ConstraintName, MOI.ConstraintFunction, MOI.ConstraintSet}
 const SolverConstraintAttribute = Union{MOI.ConstraintPrimalStart, MOI.ConstraintDualStart, MOI.ConstraintPrimal, MOI.ConstraintDual, MOI.ConstraintBasisStatus}
 

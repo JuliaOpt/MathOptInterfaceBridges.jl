@@ -2,7 +2,7 @@
 # is transformed into
 # ⟨a, x⟩ + α ≥ l
 # ⟨a, x⟩ + α ≤ u
-struct SplitIntervalBridge{T}
+struct SplitIntervalBridge{T} <: AbstractBridge
     lower::CR{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}
     upper::CR{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}
 end
@@ -11,21 +11,19 @@ function SplitIntervalBridge(instance, f::MOI.ScalarAffineFunction, s::MOI.Inter
     upper = MOI.addconstraint!(instance, f, MOI.LessThan(s.upper))
     SplitIntervalBridge(lower, upper)
 end
-MOI.get(b::SplitIntervalBridge, ::MOI.NumberOfConstraints) = 0
+# Attributes, Bridge acting as an instance
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where T = 1
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}) where T = 1
-MOI.get(b::SplitIntervalBridge, ::MOI.ListOfConstraintReferences{F, S}) where {F, S} = CR{F, S}[]
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}) where {T} = [b.lower]
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where {T} = [b.upper]
 
 # References
-MOI.candelete(instance::MOI.AbstractInstance, c::SplitIntervalBridge) = true
 function MOI.delete!(instance::MOI.AbstractInstance, c::SplitIntervalBridge)
     MOI.delete!(instance, c.lower)
     MOI.delete!(instance, c.upper)
 end
 
-# Attributes
+# Attributes, Bridge acting as a constraint reference
 MOI.canget(instance::MOI.AbstractInstance, a::MOI.ConstraintPrimal, c::SplitIntervalBridge) = true
 function MOI.get(instance::MOI.AbstractInstance, a::MOI.ConstraintPrimal, c::SplitIntervalBridge)
     # lower and upper should give the same value

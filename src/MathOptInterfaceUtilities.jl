@@ -22,7 +22,7 @@ include("sets.jl")
 include("instance.jl")
 include("parser.jl")
 
-include("intervalbridge.jl")
 include("bridge.jl")
+include("intervalbridge.jl")
 
 end # module
