@@ -1,5 +1,13 @@
 export @bridge
 
+"""
+    AbstractBridge
+
+A bridge represents a bridged constraint in an `AbstractBridgeInstance`. It contains the references towards the constraints that it has created in the instance.
+These can be obtained using `MOI.NumberOfConstraints` and `MOI.ListOfConstraintReferences` and using the bridge in place of a `AbstractInstance`.
+Attributes of the bridged instance such as `MOI.ConstraintDual` and `MOI.ConstraintPrimal`, can be obtained using the bridge in place of the constraint reference.
+These call are used by the `AbstractBridgeInstance` to communicate with the bridge so they should be implemented by the bridge.
+"""
 abstract type AbstractBridge end
 
 """
