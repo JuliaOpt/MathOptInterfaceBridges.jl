@@ -11,6 +11,12 @@ These call are used by the `AbstractBridgeInstance` to communicate with the brid
 abstract type AbstractBridge end
 
 """
+    MOI.get(b::AbstractBridge, ::MOI.NumberOfVariables)
+
+The number of variables created by the bridge `b` in the instance.
+"""
+MOI.get(b::AbstractBridge, ::MOI.NumberOfVariables) = 0
+"""
     MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
 
 The number of constraints of the type `F`-in-`S` created by the bridge `b` in the instance.
@@ -56,7 +62,7 @@ function MOI.get(b::AbstractBridgeInstance, loc::MOI.ListOfConstraintReferences)
     end
     locr
 end
-function MOI.get(b::AbstractBridgeInstance, attr::MOI.NumberOfConstraints)
+function MOI.get(b::AbstractBridgeInstance, attr::Union{MOI.NumberOfConstraints, MOI.NumberOfVariables})
     s = MOI.get(b.instance, attr)
     for v in values(b.bridges)
         s -= MOI.get(v, attr)
@@ -83,7 +89,9 @@ end
 
 # Constraints
 MOI.canaddconstraint(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = MOI.canaddconstraint(b.instance, f, s)
-MOI.addconstraint!(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = MOI.addconstraint!(b.instance, f, s)
+function MOI.addconstraint!(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
+    MOI.addconstraint!(b.instance, f, s)
+end
 MOI.canmodifyconstraint(b::AbstractBridgeInstance, cr::CR, change) = MOI.canmodifyconstraint(b.instance, cr, change)
 MOI.modifyconstraint!(b::AbstractBridgeInstance, cr::CR, change) = MOI.modifyconstraint!(b.instance, cr, change)
 
@@ -175,10 +183,10 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
 
         # Constraints
         $MOI.canaddconstraint(b::$instancename, f::$bridgedfuns, s::$bridgedsets) = $MOI.canaddconstraint(b.bridged, f, s)
-        function $MOI.addconstraint!(b::$instancename, f::$bridgedfuns, s::$bridgedsets)
+        function $MOI.addconstraint!(b::$instancename{T}, f::$bridgedfuns, s::$bridgedsets) where T
             cr = $MOI.addconstraint!(b.bridged, f, s)
             @assert !haskey(b.bridges, cr.value)
-            b.bridges[cr.value] = $bridge(b.instance, f, s)
+            b.bridges[cr.value] = $bridge{T}(b.instance, f, s)
             cr
         end
         function $MOI.canmodifyconstraint(b::$instancename, cr::$CR{<:$bridgedfuns, <:$bridgedsets}, change)

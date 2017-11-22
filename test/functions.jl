@@ -55,6 +55,12 @@
         @test h.variables    == [z, x, y, z, x]
         @test h.coefficients == [2, 6, 7, 1, 4]
         @test h.constant == [5, 2]
+        F = MOIU.moivcat(it[[1, 2]], it[3])
+        @test F isa MOI.VectorAffineFunction{Int}
+        @test F.outputindex  == [1, 1, 1, 2, 2, 2, 2, 3, 3]
+        @test F.variables    == [y, z, x, x, z, y, y, z, x]
+        @test F.coefficients == [7, 1, 4, 1, 9, 3, 1, 2, 6]
+        @test F.constant == f.constant
     end
     @testset "Indexing on VectorQuadraticFunction" begin
         f = MOI.VectorQuadraticFunction([2, 1, 3, 2, 2],

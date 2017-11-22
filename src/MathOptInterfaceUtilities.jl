@@ -24,5 +24,7 @@ include("parser.jl")
 
 include("bridge.jl")
 include("intervalbridge.jl")
+include("geomeanbridge.jl")
+include("detbridge.jl")
 
 end # module
