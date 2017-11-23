@@ -62,8 +62,7 @@ function RootDetBridge{T}(instance, f::MOI.VectorAffineFunction{T}, s::MOI.RootD
     sdref = MOI.addconstraint!(instance, Y, MOI.PositiveSemidefiniteConeTriangle(2d))
 
     t = eachscalar(f)[1]
-    diagidx = trimap.(1:d, 1:d)
-    D = MOI.VectorAffineFunction(diagidx, Δ[diagidx], ones(T, d), zeros(T, d))
+    D = MOI.VectorAffineFunction{T}(MOI.VectorOfVariables(Δ[trimap.(1:d, 1:d)]))
     gmref = MOI.addconstraint!(instance, moivcat(t, D), MOI.GeometricMeanCone(d+1))
 
     RootDetBridge(Δ, sdref, gmref)
