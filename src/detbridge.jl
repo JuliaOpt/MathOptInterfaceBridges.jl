@@ -28,6 +28,9 @@ struct RootDetBridge{T} <: AbstractBridge
     sdref::CR{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}
     gmref::CR{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}
 end
+function RootDetBridge{T}(instance, f::MOI.VectorOfVariables, s::MOI.RootDetConeTriangle) where T
+    RootDetBridge{T}(instance, MOI.VectorAffineFunction{T}(f), s)
+end
 function RootDetBridge{T}(instance, f::MOI.VectorAffineFunction{T}, s::MOI.RootDetConeTriangle) where T
     d = s.dimension
     n = trimap(d, d)
