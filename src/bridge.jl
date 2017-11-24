@@ -129,8 +129,8 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function MOI.$f(b::$instancename, attr::Union{$MOI.ListOfConstraintReferences{<:$bridgedfuns, <:$bridgedsets}, $MOI.NumberOfConstraints{<:$bridgedfuns, <:$bridgedsets}})
-                MOI.$f(b.bridged, attr)
+            function $MOI.$f(b::$instancename, attr::Union{$MOI.ListOfConstraintReferences{<:$bridgedfuns, <:$bridgedsets}, $MOI.NumberOfConstraints{<:$bridgedfuns, <:$bridgedsets}})
+                $MOI.$f(b.bridged, attr)
             end
         end
     end
@@ -139,11 +139,11 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
-                MOI.$f(b.bridged, attr, cr)
+            function $MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
+                $MOI.$f(b.bridged, attr, cr)
             end
-            function MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
-                MOI.$f(b.instance, attr, $MOIU.bridge(b, cr))
+            function $MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
+                $MOI.$f(b.instance, attr, $MOIU.bridge(b, cr))
             end
         end
     end
@@ -155,20 +155,20 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
             instance::IT
             bridged::$bridgedinstancename{T}
             bridges::Dict{UInt64, $bridge{T}}
-            function $instancename{T}(instance::IT) where {T, IT <: MOI.AbstractInstance}
+            function $instancename{T}(instance::IT) where {T, IT <: $MOI.AbstractInstance}
                 new{T, IT}(instance, $bridgedinstancename{T}(), Dict{UInt64, $bridge{T}}())
             end
         end
 
         # References
-        MOI.candelete(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = MOI.candelete(b.bridged, cr) && MOI.candelete(b.instance, $MOIU.bridge(b, cr))
+        $MOI.candelete(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.candelete(b.bridged, cr) && $MOI.candelete(b.instance, $MOIU.bridge(b, cr))
 
-        MOI.isvalid(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = MOI.isvalid(b.bridged, cr)
+        $MOI.isvalid(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.isvalid(b.bridged, cr)
 
-        function MOI.delete!(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T
-            MOI.delete!(b.instance, $MOIU.bridge(b, cr))
+        function $MOI.delete!(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T
+            $MOI.delete!(b.instance, $MOIU.bridge(b, cr))
             delete!(b.instance, cr.value)
-            MOI.delete!(b.bridged, cr)
+            $MOI.delete!(b.bridged, cr)
         end
 
         $attributescode

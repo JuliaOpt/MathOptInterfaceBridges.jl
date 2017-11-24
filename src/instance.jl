@@ -348,14 +348,14 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     instancedef = quote
         mutable struct $instancename{T} <: $MOIU.AbstractInstance{T}
             sense::$MOI.OptimizationSense
-            objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
+            objective::Union{$MOI.SingleVariable, $MOI.ScalarAffineFunction{T}, $MOI.ScalarQuadraticFunction{T}}
             nextvariableid::UInt64
-            varrefs::Set{MOI.VariableReference}
+            varrefs::Set{$MOI.VariableReference}
             varnames::Dict{UInt64, String}
-            namesvar::Dict{String, MOI.VariableReference}
+            namesvar::Dict{String, $MOI.VariableReference}
             nextconstraintid::UInt64
             connames::Dict{UInt64, String}
-            namescon::Dict{String, MOI.ConstraintReference}
+            namescon::Dict{String, $MOI.ConstraintReference}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
         end
     end
@@ -422,8 +422,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableReference[], T[], zero(T)),
-                   0, Set{MOI.VariableReference}(), Dict{UInt64, String}(), Dict{String, MOI.VariableReference}(),
-                   0, Dict{UInt64, String}(), Dict{String, MOI.ConstraintReference}(), Int[],
+                   0, Set{$VR}(), Dict{UInt64, String}(), Dict{String, $VR}(),
+                   0, Dict{UInt64, String}(), Dict{String, $CR}(), Int[],
                    $(_getCV.(funs)...))
         end
 
