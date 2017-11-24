@@ -1,8 +1,8 @@
-MOIU.@instance NoIntervalLPInstance () (EqualTo, GreaterThan, LessThan) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
+MOIU.@instance SimpleInstance () (EqualTo, GreaterThan, LessThan) (Zeros, Nonnegatives, Nonpositives, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
 MOIU.@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (ScalarAffineFunction,) () ()
 
-@testset "Interval brige" begin
-    const instance = SplitInterval{Int}(Instance{Int}())
+@testset "Interval bridge" begin
+    const instance = SplitInterval{Int}(SimpleInstance{Int}())
 
     x, y = MOI.addvariables!(instance, 2)
     @test MOI.get(instance, MOI.NumberOfVariables()) == 2
@@ -31,4 +31,20 @@ MOIU.@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (Sca
     @test MOI.canget(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
     @test (@inferred MOI.get(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())) == [c1]
     @test (@inferred MOI.get(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}())) == [c2]
+end
+
+using MathOptInterfaceTests
+const MOIT = MathOptInterfaceTests
+
+config = MOIT.TestConfig(1e-7, 1e-7, false, true, true, true)
+
+MOIU.@bridge GeoMean MOIU.GeoMeanBridge () () (GeometricMeanCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
+@testset "GeoMeanBridge" begin
+    MOIT.geomeantest(() -> GeoMean{Float64}(SimpleInstance{Float64}()), config)
+end
+
+@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
+@testset "RootDetBridge" begin
+    MOIT.rootdet1tvtest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+    MOIT.rootdet1tftest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
 end

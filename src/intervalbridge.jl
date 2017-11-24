@@ -6,7 +6,7 @@ struct SplitIntervalBridge{T} <: AbstractBridge
     lower::CR{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}
     upper::CR{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}
 end
-function SplitIntervalBridge(instance, f::MOI.ScalarAffineFunction, s::MOI.Interval)
+function SplitIntervalBridge{T}(instance, f::MOI.ScalarAffineFunction{T}, s::MOI.Interval{T}) where T
     lower = MOI.addconstraint!(instance, f, MOI.GreaterThan(s.lower))
     upper = MOI.addconstraint!(instance, f, MOI.LessThan(s.upper))
     SplitIntervalBridge(lower, upper)

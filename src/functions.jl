@@ -1,6 +1,27 @@
 using Base.Test
 
-# Define conversion VectorOfVariable -> VectorAffineFunction{T}
+# Cat for MOI sets
+affineoutputindex(f::MOI.ScalarAffineFunction) = ones(Int, length(f.variables))
+affineoutputindex(f::MOI.VectorAffineFunction) = f.outputindex
+moilength(f::MOI.ScalarAffineFunction) = 1
+moilength(f::MOI.VectorAffineFunction) = length(f.constant)
+constant(f::MOI.ScalarAffineFunction) = [f.constant]
+constant(f::MOI.VectorAffineFunction) = f.constant
+function moivcat(f::Union{MOI.ScalarAffineFunction, MOI.VectorAffineFunction}...)
+    n = length(f)
+    offsets = cumsum(collect(moilength.(f)))
+    offsets = [0; offsets[1:(n-1)]]
+    outputindex = vcat((affineoutputindex.(f) .+ offsets)...)
+    variables = vcat((f -> f.variables).(f)...)
+    coefficients = vcat((f -> f.coefficients).(f)...)
+    cst = vcat(constant.(f)...)
+    MOI.VectorAffineFunction(outputindex, variables, coefficients, cst)
+end
+
+# Define conversion SingleVariable -> ScalarAffineFunction and VectorOfVariable -> VectorAffineFunction{T}
+function MOI.ScalarAffineFunction{T}(f::MOI.SingleVariable) where T
+    MOI.ScalarAffineFunction([f.variable], ones(T, 1), zero(T))
+end
 function MOI.VectorAffineFunction{T}(f::MOI.VectorOfVariables) where T
     n = length(f.variables)
     MOI.VectorAffineFunction(collect(1:n), f.variables, ones(T, n), zeros(T, n))
