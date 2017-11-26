@@ -209,9 +209,9 @@ To add all constraints of the instance to a solver `solver`, one can do
 ```julia
 _addcon(solver, cr, f, s) = MOI.addconstraint!(solver, f, s)
 function _addcon(solver, constrs::Vector)
-for constr in constrs
-_addcon(solver, constr...)
-end
+    for constr in constrs
+        _addcon(solver, constr...)
+    end
 end
 MOIU.broadcastcall(constrs -> _addcon(solver, constrs), instance)
 ```
