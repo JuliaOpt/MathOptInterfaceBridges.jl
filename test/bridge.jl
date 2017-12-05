@@ -16,8 +16,8 @@ MOIU.@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (Sca
     @test MOI.get(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}()) == 0
     @test MOI.canget(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
     @test MOI.get(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}()) == 1
-    @test MOI.canget(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
-    @test (@inferred MOI.get(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())) == [c1]
+    @test MOI.canget(instance, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
+    @test (@inferred MOI.get(instance, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())) == [c1]
 
     f2 = MOI.ScalarAffineFunction([x, y], [2, -1], 2)
     c2 = MOI.addconstraint!(instance, f1, MOI.GreaterThan(-2))
@@ -28,9 +28,9 @@ MOIU.@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (Sca
     @test MOI.get(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}()) == 1
     @test MOI.canget(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}())
     @test MOI.get(instance, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}()) == 1
-    @test MOI.canget(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
-    @test (@inferred MOI.get(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())) == [c1]
-    @test (@inferred MOI.get(instance, MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}())) == [c2]
+    @test MOI.canget(instance, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())
+    @test (@inferred MOI.get(instance, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.Interval{Int}}())) == [c1]
+    @test (@inferred MOI.get(instance, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}())) == [c2]
 end
 
 using MathOptInterfaceTests

@@ -24,9 +24,9 @@ Indeed, ``t \\le \\det(X)^(1/n)`` if and only if there exists a lower triangular
 [1] Ben-Tal, Aharon, and Arkadi Nemirovski. *Lectures on modern convex optimization: analysis, algorithms, and engineering applications*. Society for Industrial and Applied Mathematics, 2001.
 """
 struct RootDetBridge{T} <: AbstractBridge
-    Δ::Vector{VR}
-    sdref::CR{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}
-    gmref::CR{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}
+    Δ::Vector{VI}
+    sdindex::CI{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}
+    gmindex::CI{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}
 end
 function RootDetBridge{T}(instance, f::MOI.VectorOfVariables, s::MOI.RootDetConeTriangle) where T
     RootDetBridge{T}(instance, MOI.VectorAffineFunction{T}(f), s)
@@ -43,7 +43,7 @@ function RootDetBridge{T}(instance, f::MOI.VectorAffineFunction{T}, s::MOI.RootD
     M = m + n + d
 
     outputindex = Vector{Int}(M); outputindex[1:m] = X.outputindex
-    variables = Vector{VR}(M); variables[1:m] = X.variables
+    variables = Vector{VI}(M); variables[1:m] = X.variables
     coefficients = Vector{T}(M); coefficients[1:m] = X.coefficients
     constant = zeros(T, N); constant[1:n] = X.constant
 
@@ -62,34 +62,34 @@ function RootDetBridge{T}(instance, f::MOI.VectorAffineFunction{T}, s::MOI.RootD
     end
     @assert cur == M
     Y = MOI.VectorAffineFunction(outputindex, variables, coefficients, constant)
-    sdref = MOI.addconstraint!(instance, Y, MOI.PositiveSemidefiniteConeTriangle(2d))
+    sdindex = MOI.addconstraint!(instance, Y, MOI.PositiveSemidefiniteConeTriangle(2d))
 
     t = eachscalar(f)[1]
     D = MOI.VectorAffineFunction{T}(MOI.VectorOfVariables(Δ[trimap.(1:d, 1:d)]))
-    gmref = MOI.addconstraint!(instance, moivcat(t, D), MOI.GeometricMeanCone(d+1))
+    gmindex = MOI.addconstraint!(instance, moivcat(t, D), MOI.GeometricMeanCone(d+1))
 
-    RootDetBridge(Δ, sdref, gmref)
+    RootDetBridge(Δ, sdindex, gmindex)
 end
 
 # Attributes, Bridge acting as an instance
 MOI.get(b::RootDetBridge, ::MOI.NumberOfVariables) = length(b.Δ)
 MOI.get(b::RootDetBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = 1
 MOI.get(b::RootDetBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}) where T = 1
-MOI.get(b::RootDetBridge{T}, ::MOI.ListOfConstraintReferences{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = [b.sdref]
-MOI.get(b::RootDetBridge{T}, ::MOI.ListOfConstraintReferences{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}) where T = [b.gmref]
+MOI.get(b::RootDetBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = [b.sdindex]
+MOI.get(b::RootDetBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone}) where T = [b.gmindex]
 
 # References
 function MOI.delete!(instance::MOI.AbstractInstance, c::RootDetBridge)
     MOI.delete!(instance, c.Δ)
-    MOI.delete!(instance, c.sdref)
-    MOI.delete!(instance, c.gmref)
+    MOI.delete!(instance, c.sdindex)
+    MOI.delete!(instance, c.gmindex)
 end
 
-# Attributes, Bridge acting as a constraint reference
+# Attributes, Bridge acting as a constraint
 MOI.canget(instance::MOI.AbstractInstance, a::MOI.ConstraintPrimal, c::RootDetBridge) = true
 function MOI.get(instance::MOI.AbstractInstance, a::MOI.ConstraintPrimal, c::RootDetBridge)
-    t = MOI.get(instance, MOI.ConstraintPrimal(), c.gmref)[1]
-    x = MOI.get(instance, MOI.ConstraintPrimal(), c.sdref)[1:length(c.Δ)]
+    t = MOI.get(instance, MOI.ConstraintPrimal(), c.gmindex)[1]
+    x = MOI.get(instance, MOI.ConstraintPrimal(), c.sdindex)[1:length(c.Δ)]
     [t; x]
 end
 MOI.canget(instance::MOI.AbstractInstance, a::MOI.ConstraintDual, c::RootDetBridge) = false

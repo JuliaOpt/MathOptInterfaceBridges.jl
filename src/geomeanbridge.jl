@@ -43,9 +43,9 @@ struct GeoMeanBridge{T} <: AbstractBridge
     # We create n new variables so that there is 2^l = d-1+n variables x_i
     # We then need to create 2^l-1 new variables (1+2+...+2^{l-1})
     d::Int
-    xij::Vector{VR}
-    tubc::CR{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}
-    socrc::Vector{CR{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}}
+    xij::Vector{VI}
+    tubc::CI{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}
+    socrc::Vector{CI{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}}
 end
 function GeoMeanBridge{T}(instance, f::MOI.VectorOfVariables, s::MOI.GeometricMeanCone) where T
     GeoMeanBridge{T}(instance, MOI.VectorAffineFunction{T}(f), s)
@@ -71,7 +71,7 @@ function GeoMeanBridge{T}(instance, f::MOI.VectorAffineFunction{T}, s::MOI.Geome
     # With sqrt(2)^l*t - xl1, we should scale both the ConstraintPrimal and ConstraintDual
     tubc = MOI.addconstraint!(instance, MOI.ScalarAffineFunction([t.variables; xl1], [t.coefficients; -sN], t.constant), MOI.LessThan(zero(T)))
 
-    socrc = Vector{CR{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}}(N-1)
+    socrc = Vector{CI{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}}(N-1)
     offset = offsetnext = 0
     for i in 1:l
         offsetnext = offset + i
@@ -94,8 +94,8 @@ end
 MOI.get(b::GeoMeanBridge, ::MOI.NumberOfVariables) = length(b.xij)
 MOI.get(b::GeoMeanBridge{T}, ::MOI.NumberOfConstraints{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where T = 1 # t ≤ x_{l1}/sqrt(N)
 MOI.get(b::GeoMeanBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}) where T = length(b.socrc)
-MOI.get(b::GeoMeanBridge{T}, ::MOI.ListOfConstraintReferences{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where T = [b.tubc]
-MOI.get(b::GeoMeanBridge{T}, ::MOI.ListOfConstraintReferences{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}) where T = b.socrc
+MOI.get(b::GeoMeanBridge{T}, ::MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where T = [b.tubc]
+MOI.get(b::GeoMeanBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone}) where T = b.socrc
 
 # References
 function MOI.delete!(instance::MOI.AbstractInstance, c::GeoMeanBridge)
@@ -104,7 +104,7 @@ function MOI.delete!(instance::MOI.AbstractInstance, c::GeoMeanBridge)
     MOI.delete!(instance, c.socrc)
 end
 
-# Attributes, Bridge acting as a constraint reference
+# Attributes, Bridge acting as a constraint
 MOI.canget(instance::MOI.AbstractInstance, a::MOI.ConstraintPrimal, c::GeoMeanBridge) = true
 function _getconstrattr(instance, a, c::GeoMeanBridge{T}) where T
     output = Vector{T}(c.d)
