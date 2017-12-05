@@ -61,7 +61,7 @@ end
 
 function Base.getindex(it::ScalarFunctionIterator{MOI.VectorAffineFunction{T}}, I::AbstractVector) where T
     outputindex = Int[]
-    variables = VR[]
+    variables = VI[]
     coefficients = T[]
     constant = Vector{T}(length(I))
     for (i, j) in enumerate(I)
@@ -100,7 +100,7 @@ Base.deepcopy(f::VQF) = VQF(copy(f.affine_outputindex),
                             f.constant)
 
 # Utilities for getting a canonical representation of a function
-Base.isless(v1::VR, v2::VR) = isless(v1.value, v2.value)
+Base.isless(v1::VI, v2::VI) = isless(v1.value, v2.value)
 """
     canonical(f::AbstractFunction)
 
@@ -111,14 +111,14 @@ Returns the funcion in a canonical form, i.e.
 * For a `AbstractVectorFunction`, the terms are sorted in ascending order of output index.
 
 ### Examples
-If `x` (resp. `y`, `z`) is `VariableReference(1)` (resp. 2, 3).
+If `x` (resp. `y`, `z`) is `VariableIndex(1)` (resp. 2, 3).
 The canonical representation of `ScalarAffineFunction([y, x, z, x, z], [2, 1, 3, -2, -3], 5)` is `ScalarAffineFunction([x, y], [-1, 2], 5)`.
 
 """
 function canonical{T}(f::SAF{T})
     σ = sortperm(f.variables)
     outputindex = Int[]
-    variables = VR[]
+    variables = VI[]
     coefficients = T[]
     prev = 0
     for i in σ
@@ -143,7 +143,7 @@ end
 function canonical{T}(f::VAF{T})
     σ = sortperm(1:length(f.variables), by = i -> (f.outputindex[i], f.variables[i]))
     outputindex = Int[]
-    variables = VR[]
+    variables = VI[]
     coefficients = T[]
     prev = 0
     for i in σ
@@ -210,7 +210,7 @@ end
 
 function Base.isapprox(f1::MOI.ScalarAffineFunction{T}, f2::MOI.ScalarAffineFunction{T}; kwargs...) where {T}
     function canonicalize(f)
-        d = Dict{MOI.VariableReference,T}()
+        d = Dict{MOI.VariableIndex,T}()
         @assert length(f.variables) == length(f.coefficients)
         for k in 1:length(f.variables)
             d[f.variables[k]] = f.coefficients[k] + get(d, f.variables[k], zero(T))
@@ -227,12 +227,12 @@ end
 
 function Base.isapprox(f1::MOI.ScalarQuadraticFunction{T}, f2::MOI.ScalarQuadraticFunction{T}; kwargs...) where {T}
     function canonicalize(f)
-        affine_d = Dict{MOI.VariableReference,T}()
+        affine_d = Dict{MOI.VariableIndex,T}()
         @assert length(f.affine_variables) == length(f.affine_coefficients)
         for k in 1:length(f.affine_variables)
             affine_d[f.affine_variables[k]] = f.affine_coefficients[k] + get(affine_d, f.affine_variables[k], zero(T))
         end
-        quadratic_d = Dict{Set{MOI.VariableReference},T}()
+        quadratic_d = Dict{Set{MOI.VariableIndex},T}()
         @assert length(f.quadratic_rowvariables) == length(f.quadratic_coefficients)
         @assert length(f.quadratic_colvariables) == length(f.quadratic_coefficients)
         for k in 1:length(f.quadratic_rowvariables)
@@ -253,8 +253,8 @@ end
 
 function test_variablenames_equal(instance, variablenames)
     seen_name = Dict(name => false for name in variablenames)
-    for ref in MOI.get(instance, MOI.ListOfVariableReferences())
-        vname = MOI.get(instance, MOI.VariableName(), ref)
+    for index in MOI.get(instance, MOI.ListOfVariableIndices())
+        vname = MOI.get(instance, MOI.VariableName(), index)
         if !haskey(seen_name, vname)
             error("Variable with name $vname present in instance but not expected list of variable names.")
         end
@@ -272,8 +272,8 @@ end
 function test_constraintnames_equal(instance, constraintnames)
     seen_name = Dict(name => false for name in constraintnames)
     for (F,S) in MOI.get(instance, MOI.ListOfConstraints())
-        for ref in MOI.get(instance, MOI.ListOfConstraintReferences{F,S}())
-            cname = MOI.get(instance, MOI.ConstraintName(), ref)
+        for index in MOI.get(instance, MOI.ListOfConstraintIndices{F,S}())
+            cname = MOI.get(instance, MOI.ConstraintName(), index)
             if !haskey(seen_name, cname)
                 error("Constraint with name $cname present in instance but not expected list of constraint names.")
             end
@@ -290,7 +290,7 @@ function test_constraintnames_equal(instance, constraintnames)
     end
 end
 
-map_variables(f::Vector{MOI.VariableReference}, variablemap::Dict{MOI.VariableReference,MOI.VariableReference}) = map(v -> variablemap[v], f)
+map_variables(f::Vector{MOI.VariableIndex}, variablemap::Dict{MOI.VariableIndex,MOI.VariableIndex}) = map(v -> variablemap[v], f)
 map_variables(f, variablemap) = f
 
 
@@ -299,7 +299,7 @@ for moiname in [MOI.ScalarAffineFunction,MOI.VectorAffineFunction,
                  MOI.SingleVariable,MOI.VectorOfVariables]
     fields = fieldnames(moiname)
     constructor = Expr(:call, moiname, [Expr(:call,:map_variables,Expr(:.,:f,Base.Meta.quot(field)),:variablemap) for field in fields]...)
-    @eval map_variables(f::$moiname, variablemap::Dict{MOI.VariableReference,MOI.VariableReference}) = $constructor
+    @eval map_variables(f::$moiname, variablemap::Dict{MOI.VariableIndex,MOI.VariableIndex}) = $constructor
 end
 
 """
@@ -314,20 +314,20 @@ function test_instances_equal(instance1::MOI.AbstractInstance, instance2::MOI.Ab
     test_constraintnames_equal(instance1, constraintnames)
     test_constraintnames_equal(instance2, constraintnames)
 
-    variablemap_2to1 = Dict{MOI.VariableReference,MOI.VariableReference}()
+    variablemap_2to1 = Dict{MOI.VariableIndex,MOI.VariableIndex}()
     for vname in variablenames
-        ref1 = MOI.get(instance1, MOI.VariableReference, vname)
-        ref2 = MOI.get(instance2, MOI.VariableReference, vname)
-        variablemap_2to1[ref2] = ref1
+        index1 = MOI.get(instance1, MOI.VariableIndex, vname)
+        index2 = MOI.get(instance2, MOI.VariableIndex, vname)
+        variablemap_2to1[index2] = index1
     end
 
     for cname in constraintnames
-        ref1 = MOI.get(instance1, MOI.ConstraintReference, cname)
-        ref2 = MOI.get(instance2, MOI.ConstraintReference, cname)
-        f1 = MOI.get(instance1, MOI.ConstraintFunction(), ref1)
-        f2 = MOI.get(instance2, MOI.ConstraintFunction(), ref2)
-        s1 = MOI.get(instance1, MOI.ConstraintSet(), ref1)
-        s2 = MOI.get(instance2, MOI.ConstraintSet(), ref2)
+        index1 = MOI.get(instance1, MOI.ConstraintIndex, cname)
+        index2 = MOI.get(instance2, MOI.ConstraintIndex, cname)
+        f1 = MOI.get(instance1, MOI.ConstraintFunction(), index1)
+        f2 = MOI.get(instance2, MOI.ConstraintFunction(), index2)
+        s1 = MOI.get(instance1, MOI.ConstraintSet(), index1)
+        s2 = MOI.get(instance2, MOI.ConstraintSet(), index2)
         @test isapprox(f1, map_variables(f2, variablemap_2to1))
         @test s1 == s2
     end
@@ -338,16 +338,16 @@ function test_instances_equal(instance1::MOI.AbstractInstance, instance2::MOI.Ab
 end
 
 
-function _rmvar(vrs::Vector{MOI.VariableReference}, vr::MOI.VariableReference)
+function _rmvar(vrs::Vector{MOI.VariableIndex}, vr::MOI.VariableIndex)
     find(v -> v != vr, vrs)
 end
-function _rmvar(vrs1::Vector{MOI.VariableReference}, vrs2::Vector{MOI.VariableReference}, vr::MOI.VariableReference)
+function _rmvar(vrs1::Vector{MOI.VariableIndex}, vrs2::Vector{MOI.VariableIndex}, vr::MOI.VariableIndex)
     @assert eachindex(vrs1) == eachindex(vrs2)
     find(i -> vrs1[i] != vr && vrs2[i] != vr, eachindex(vrs1))
 end
 
 """
-    removevariable(f::AbstractFunction, vr::VariableReference)
+    removevariable(f::AbstractFunction, vr::VariableIndex)
 
 Return a new function `f` with the variable vr removed.
 """
@@ -400,7 +400,7 @@ function modifyfunction(f::MOI.VectorQuadraticFunction, change::MOI.VectorConsta
                                 change.new_constant)
 end
 
-function _modifycoefficient(variables::Vector{MOI.VariableReference}, coefficients::Vector, variable::MOI.VariableReference, new_coefficient)
+function _modifycoefficient(variables::Vector{MOI.VariableIndex}, coefficients::Vector, variable::MOI.VariableIndex, new_coefficient)
     variables = copy(variables)
     coefficients = copy(coefficients)
     i = findfirst(variables, variable)
@@ -430,7 +430,7 @@ function modifyfunction(f::MOI.ScalarQuadraticFunction, change::MOI.ScalarCoeffi
                             f.constant)
 
 end
-function _modifycoefficients(n, outputindex, variables::Vector{MOI.VariableReference}, coefficients::Vector, variable::MOI.VariableReference, rows, new_coefficients)
+function _modifycoefficients(n, outputindex, variables::Vector{MOI.VariableIndex}, coefficients::Vector, variable::MOI.VariableIndex, rows, new_coefficients)
     outputindex = copy(outputindex)
     variables = copy(variables)
     coefficients = copy(coefficients)

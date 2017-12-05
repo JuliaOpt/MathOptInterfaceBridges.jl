@@ -3,10 +3,10 @@ export @bridge
 """
     AbstractBridge
 
-A bridge represents a bridged constraint in an `AbstractBridgeInstance`. It contains the references towards the constraints that it has created in the instance.
-These can be obtained using `MOI.NumberOfConstraints` and `MOI.ListOfConstraintReferences` and using the bridge in place of a `AbstractInstance`.
-Attributes of the bridged instance such as `MOI.ConstraintDual` and `MOI.ConstraintPrimal`, can be obtained using the bridge in place of the constraint reference.
-These call are used by the `AbstractBridgeInstance` to communicate with the bridge so they should be implemented by the bridge.
+A bridge represents a bridged constraint in an `AbstractBridgeInstance`. It contains the indices of the constraints that it has created in the instance.
+These can be obtained using `MOI.NumberOfConstraints` and `MOI.ListOfConstraintIndices` and using the bridge in place of a `AbstractInstance`.
+Attributes of the bridged instance such as `MOI.ConstraintDual` and `MOI.ConstraintPrimal`, can be obtained using the bridge in place of the constraint index.
+These calls are used by the `AbstractBridgeInstance` to communicate with the bridge so they should be implemented by the bridge.
 """
 abstract type AbstractBridge end
 
@@ -25,10 +25,10 @@ MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 """
     MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
 
-A `Vector{ConstraintReferences{F,S}}` with references to all constraints of
+A `Vector{ConstraintIndex{F,S}}` with indices of all constraints of
 type `F`-in`S` created by the bride `b` in the instance (i.e., of length equal to the value of `NumberOfConstraints{F,S}()`).
 """
-MOI.get(b::AbstractBridge, ::MOI.ListOfConstraintReferences{F, S}) where {F, S} = CR{F, S}[]
+MOI.get(b::AbstractBridge, ::MOI.ListOfConstraintIndices{F, S}) where {F, S} = CI{F, S}[]
 
 """
     MOI.candelete(instance::MOI.AbstractInstance, b::AbstractBridge)
@@ -41,16 +41,16 @@ const InstanceConstraintAttribute = Union{MOI.ConstraintName, MOI.ConstraintFunc
 const SolverConstraintAttribute = Union{MOI.ConstraintPrimalStart, MOI.ConstraintDualStart, MOI.ConstraintPrimal, MOI.ConstraintDual, MOI.ConstraintBasisStatus}
 
 abstract type AbstractBridgeInstance <: MOI.AbstractSolverInstance end
-bridge(b::AbstractBridgeInstance, cr::CR) = b.bridges[cr.value]
+bridge(b::AbstractBridgeInstance, ci::CI) = b.bridges[ci.value]
 MOI.optimize!(b::AbstractBridgeInstance) = MOI.optimize!(b.instance)
 
 # References
-MOI.candelete(b::AbstractBridgeInstance, r::MOI.AnyReference) = MOI.candelete(b.instance, r)
-MOI.isvalid(b::AbstractBridgeInstance, r::MOI.AnyReference) = MOI.isvalid(b.instance, r)
-MOI.delete!(b::AbstractBridgeInstance, r::MOI.AnyReference) = MOI.delete!(b.instance, r)
+MOI.candelete(b::AbstractBridgeInstance, r::MOI.Index) = MOI.candelete(b.instance, r)
+MOI.isvalid(b::AbstractBridgeInstance, r::MOI.Index) = MOI.isvalid(b.instance, r)
+MOI.delete!(b::AbstractBridgeInstance, r::MOI.Index) = MOI.delete!(b.instance, r)
 
 # Attributes
-function MOI.get(b::AbstractBridgeInstance, loc::MOI.ListOfConstraintReferences)
+function MOI.get(b::AbstractBridgeInstance, loc::MOI.ListOfConstraintIndices)
     locr = MOI.get(b.instance, loc)
     for bridge in values(b.bridges)
         for c in MOI.get(bridge, loc)
@@ -80,8 +80,8 @@ end
 for f in (:canget, :canset, :set!, :get, :get!)
     @eval begin
         MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute) = MOI.$f(b.instance, attr)
-        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, ref::MOI.AnyReference) = MOI.$f(b.instance, attr, ref)
-        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, refs::Vector{<:MOI.AnyReference}) = MOI.$f(b.instance, attr, refs)
+        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, index::MOI.Index) = MOI.$f(b.instance, attr, index)
+        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, indices::Vector{<:MOI.Index}) = MOI.$f(b.instance, attr, indices)
         # Objective function
         MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, arg::Union{MOI.OptimizationSense, MOI.AbstractScalarFunction}) = MOI.$f(b.instance, attr, arg)
     end
@@ -92,8 +92,8 @@ MOI.canaddconstraint(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.
 function MOI.addconstraint!(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
     MOI.addconstraint!(b.instance, f, s)
 end
-MOI.canmodifyconstraint(b::AbstractBridgeInstance, cr::CR, change) = MOI.canmodifyconstraint(b.instance, cr, change)
-MOI.modifyconstraint!(b::AbstractBridgeInstance, cr::CR, change) = MOI.modifyconstraint!(b.instance, cr, change)
+MOI.canmodifyconstraint(b::AbstractBridgeInstance, ci::CI, change) = MOI.canmodifyconstraint(b.instance, ci, change)
+MOI.modifyconstraint!(b::AbstractBridgeInstance, ci::CI, change) = MOI.modifyconstraint!(b.instance, ci, change)
 
 # Objective
 MOI.canmodifyobjective(b::AbstractBridgeInstance, change::MOI.AbstractFunctionModification) = MOI.canmodifyobjective(b.instance, change)
@@ -137,7 +137,7 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function $MOI.$f(b::$instancename, attr::Union{$MOI.ListOfConstraintReferences{<:$bridgedfuns, <:$bridgedsets}, $MOI.NumberOfConstraints{<:$bridgedfuns, <:$bridgedsets}})
+            function $MOI.$f(b::$instancename, attr::Union{$MOI.ListOfConstraintIndices{<:$bridgedfuns, <:$bridgedsets}, $MOI.NumberOfConstraints{<:$bridgedfuns, <:$bridgedsets}})
                 $MOI.$f(b.bridged, attr)
             end
         end
@@ -147,10 +147,10 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function $MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
+            function $MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
                 $MOI.$f(b.bridged, attr, cr)
             end
-            function $MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, cr::$CR{<:$bridgedfuns, <:$bridgedsets})
+            function $MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
                 $MOI.$f(b.instance, attr, $MOIU.bridge(b, cr))
             end
         end
@@ -169,14 +169,14 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         end
 
         # References
-        $MOI.candelete(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.candelete(b.bridged, cr) && $MOI.candelete(b.instance, $MOIU.bridge(b, cr))
+        $MOI.candelete(b::$instancename{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.candelete(b.bridged, ci) && $MOI.candelete(b.instance, $MOIU.bridge(b, ci))
 
-        $MOI.isvalid(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.isvalid(b.bridged, cr)
+        $MOI.isvalid(b::$instancename{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.isvalid(b.bridged, ci)
 
-        function $MOI.delete!(b::$instancename{T}, cr::$CR{<:$bridgedfuns, <:$bridgedsets}) where T
-            $MOI.delete!(b.instance, $MOIU.bridge(b, cr))
-            delete!(b.instance, cr.value)
-            $MOI.delete!(b.bridged, cr)
+        function $MOI.delete!(b::$instancename{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T
+            $MOI.delete!(b.instance, $MOIU.bridge(b, ci))
+            delete!(b.instance, ci.value)
+            $MOI.delete!(b.bridged, ci)
         end
 
         $attributescode
@@ -184,17 +184,17 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         # Constraints
         $MOI.canaddconstraint(b::$instancename, f::$bridgedfuns, s::$bridgedsets) = $MOI.canaddconstraint(b.bridged, f, s)
         function $MOI.addconstraint!(b::$instancename{T}, f::$bridgedfuns, s::$bridgedsets) where T
-            cr = $MOI.addconstraint!(b.bridged, f, s)
-            @assert !haskey(b.bridges, cr.value)
-            b.bridges[cr.value] = $bridge{T}(b.instance, f, s)
-            cr
+            ci = $MOI.addconstraint!(b.bridged, f, s)
+            @assert !haskey(b.bridges, ci.value)
+            b.bridges[ci.value] = $bridge{T}(b.instance, f, s)
+            ci
         end
-        function $MOI.canmodifyconstraint(b::$instancename, cr::$CR{<:$bridgedfuns, <:$bridgedsets}, change)
-            $MOI.canmodifyconstraint(b.bridged, cr, change) && $MOI.canmodifyconstraint(b.instance, $MOIU.bridge(b, cr), change)
+        function $MOI.canmodifyconstraint(b::$instancename, ci::$CI{<:$bridgedfuns, <:$bridgedsets}, change)
+            $MOI.canmodifyconstraint(b.bridged, ci, change) && $MOI.canmodifyconstraint(b.instance, $MOIU.bridge(b, ci), change)
         end
-        function $MOI.modifyconstraint!(b::$instancename, cr::$CR{<:$bridgedfuns, <:$bridgedsets}, change)
-            $MOI.modifyconstraint!(b.instance, $MOIU.bridge(b, cr), change)
-            $MOI.modifyconstraint!(b.bridged, cr, change)
+        function $MOI.modifyconstraint!(b::$instancename, ci::$CI{<:$bridgedfuns, <:$bridgedsets}, change)
+            $MOI.modifyconstraint!(b.instance, $MOIU.bridge(b, ci), change)
+            $MOI.modifyconstraint!(b.bridged, ci, change)
         end
     end)
 end

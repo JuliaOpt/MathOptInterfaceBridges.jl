@@ -1,8 +1,8 @@
 @testset "Function tests" begin
-    w = MOI.VariableReference(0)
-    x = MOI.VariableReference(1)
-    y = MOI.VariableReference(2)
-    z = MOI.VariableReference(3)
+    w = MOI.VariableIndex(0)
+    x = MOI.VariableIndex(1)
+    y = MOI.VariableIndex(2)
+    z = MOI.VariableIndex(3)
     @testset "Conversion VectorOfVariables -> VectorAffineFunction" begin
         f = MOI.VectorAffineFunction{Int}(MOI.VectorOfVariables([z, x, y]))
         @test f isa MOI.VectorAffineFunction{Int}

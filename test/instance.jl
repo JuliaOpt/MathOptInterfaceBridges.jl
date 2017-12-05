@@ -3,7 +3,7 @@ MOIU.@instance LPInstance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, 
 MOIU.@instance(Instance,
                (), # <- example of giving no set
                (EqualTo, GreaterThan, LessThan, Interval),
-               (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle, PositiveSemidefiniteConeScaled),
+               (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle),
                (PowerCone, DualPowerCone),
                (SingleVariable,), # <- example of giving only one set
                (ScalarAffineFunction, ScalarQuadraticFunction),
@@ -28,8 +28,8 @@ end
 
     v = MOI.addvariables!(m, 2)
     @test MOI.get(m, MOI.NumberOfVariables()) == 2
-    @test MOI.canget(m, MOI.ListOfVariableReferences())
-    vrs = MOI.get(m, MOI.ListOfVariableReferences())
+    @test MOI.canget(m, MOI.ListOfVariableIndices())
+    vrs = MOI.get(m, MOI.ListOfVariableIndices())
     @test vrs == v || vrs == reverse(v)
 
     cf = MOI.ScalarAffineFunction(v, [1.0,1.0], 0.0)
@@ -162,8 +162,8 @@ end
     @test f.variables == [v[2], z]
     @test f.coefficients == [-1.0, 0.0]
 
-    @test MOI.canget(m, MOI.ListOfVariableReferences())
-    vrs = MOI.get(m, MOI.ListOfVariableReferences())
+    @test MOI.canget(m, MOI.ListOfVariableIndices())
+    vrs = MOI.get(m, MOI.ListOfVariableIndices())
     @test vrs == [v[2], z] || vrs == [z, v[2]]
     @test MOI.get(m, MOI.ObjectiveFunction()) ≈ MOI.ScalarAffineFunction([v[2], z], [2.0, 0.0], 0.0)
 
@@ -180,15 +180,15 @@ end
     c1 = MOI.addconstraint!(m, f1, MOI.Interval(-1, 1))
 
     @test MOI.get(m, MOI.NumberOfConstraints{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}()) == 1
-    @test MOI.canget(m, MOI.ListOfConstraintReferences{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())
-    @test (@inferred MOI.get(m, MOI.ListOfConstraintReferences{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())) == [c1]
+    @test MOI.canget(m, MOI.ListOfConstraintIndices{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())
+    @test (@inferred MOI.get(m, MOI.ListOfConstraintIndices{MOI.ScalarQuadraticFunction{Int},MOI.Interval{Int}}())) == [c1]
 
     f2 = MOI.VectorQuadraticFunction([1, 2, 2], [x, x, y], [3, 1, 2], [1, 1, 2], [x, y, x], [x, y, y], [1, 2, 3], [7, 3, 4])
     c2 = MOI.addconstraint!(m, f2, MOI.PositiveSemidefiniteConeTriangle(3))
 
     @test MOI.get(m, MOI.NumberOfConstraints{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}()) == 1
-    @test MOI.canget(m, MOI.ListOfConstraintReferences{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())
-    @test (@inferred MOI.get(m, MOI.ListOfConstraintReferences{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())) == [c2]
+    @test MOI.canget(m, MOI.ListOfConstraintIndices{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())
+    @test (@inferred MOI.get(m, MOI.ListOfConstraintIndices{MOI.VectorQuadraticFunction{Int},MOI.PositiveSemidefiniteConeTriangle}())) == [c2]
 
     @test MOI.canget(m, MOI.ListOfConstraints())
     loc = MOI.get(m, MOI.ListOfConstraints())

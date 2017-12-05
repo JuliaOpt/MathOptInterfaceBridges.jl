@@ -178,15 +178,15 @@ function separatelabel(ex)
     end
 end
 
-function variabletoref(instance, s::Symbol)
-    return MOI.get(instance, MOI.VariableReference, String(s))
+function variabletoindex(instance, s::Symbol)
+    return MOI.get(instance, MOI.VariableIndex, String(s))
 end
 
-function variabletoref(instance, s::Vector{Symbol})
-    return MOI.get.(instance, MOI.VariableReference, String.(s))
+function variabletoindex(instance, s::Vector{Symbol})
+    return MOI.get.(instance, MOI.VariableIndex, String.(s))
 end
 
-variabletoref(instance, s) = s
+variabletoindex(instance, s) = s
 
 
 for typename in [:ParsedScalarAffineFunction,:ParsedVectorAffineFunction,
@@ -194,7 +194,7 @@ for typename in [:ParsedScalarAffineFunction,:ParsedVectorAffineFunction,
                  :ParsedSingleVariable,:ParsedVectorOfVariables]
     moiname = parse(replace(string(typename), "Parsed", "MOI."))
     fields = fieldnames(eval(typename))
-    constructor = Expr(:call, moiname, [Expr(:call,:variabletoref,:instance,Expr(:.,:f,Base.Meta.quot(field))) for field in fields]...)
+    constructor = Expr(:call, moiname, [Expr(:call,:variabletoindex,:instance,Expr(:.,:f,Base.Meta.quot(field))) for field in fields]...)
     @eval parsedtoMOI(instance, f::$typename) = $constructor
 end
 
@@ -206,13 +206,13 @@ function loadfromstring!(instance, s)
         if label == :variables
             if isexpr(ex, :tuple)
                 for v in ex.args
-                    vref = MOI.addvariable!(instance)
-                    MOI.set!(instance, MOI.VariableName(), vref, String(v))
+                    vindex = MOI.addvariable!(instance)
+                    MOI.set!(instance, MOI.VariableName(), vindex, String(v))
                 end
             else
                 @assert isa(ex, Symbol)
-                vref = MOI.addvariable!(instance)
-                MOI.set!(instance, MOI.VariableName(), vref, String(ex))
+                vindex = MOI.addvariable!(instance)
+                MOI.set!(instance, MOI.VariableName(), vindex, String(ex))
             end
         elseif label == :maxobjective
             f = parsefunction(ex)
@@ -238,8 +238,8 @@ function loadfromstring!(instance, s)
             else
                 error("Unrecognized expression $ex")
             end
-            cref = MOI.addconstraint!(instance, parsedtoMOI(instance, f), set)
-            MOI.set!(instance, MOI.ConstraintName(), cref, String(label))
+            cindex = MOI.addconstraint!(instance, parsedtoMOI(instance, f), set)
+            MOI.set!(instance, MOI.ConstraintName(), cindex, String(label))
         end
     end
 end
