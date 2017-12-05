@@ -148,10 +148,10 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
             $attributescode
 
             function $MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
-                $MOI.$f(b.bridged, attr, cr)
+                $MOI.$f(b.bridged, attr, ci)
             end
             function $MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
-                $MOI.$f(b.instance, attr, $MOIU.bridge(b, cr))
+                $MOI.$f(b.instance, attr, $MOIU.bridge(b, ci))
             end
         end
     end
