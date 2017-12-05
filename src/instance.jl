@@ -311,11 +311,11 @@ end
 mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
     objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
-    nextvariableid::UInt64
+    nextvariableid::Int64
     varindices::Vector{MOI.VariableIndex}
-    varnames::Dict{UInt64, String}
-    namesvar::Dict{String, UInt64}
-    nextconstraintid::UInt64
+    varnames::Dict{Int64, String}
+    namesvar::Dict{String, Int64}
+    nextconstraintid::Int64
     constrmap::Vector{Int}
     singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
     scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
@@ -349,12 +349,12 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         mutable struct $instancename{T} <: $MOIU.AbstractInstance{T}
             sense::$MOI.OptimizationSense
             objective::Union{$MOI.SingleVariable, $MOI.ScalarAffineFunction{T}, $MOI.ScalarQuadraticFunction{T}}
-            nextvariableid::UInt64
+            nextvariableid::Int64
             varindices::Set{$MOI.VariableIndex}
-            varnames::Dict{UInt64, String}
+            varnames::Dict{Int64, String}
             namesvar::Dict{String, $MOI.VariableIndex}
-            nextconstraintid::UInt64
-            connames::Dict{UInt64, String}
+            nextconstraintid::Int64
+            connames::Dict{Int64, String}
             namescon::Dict{String, $MOI.ConstraintIndex}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
         end
@@ -422,8 +422,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableIndex[], T[], zero(T)),
-                   0, Set{$VI}(), Dict{UInt64, String}(), Dict{String, $VI}(),
-                   0, Dict{UInt64, String}(), Dict{String, $CI}(), Int[],
+                   0, Set{$VI}(), Dict{Int64, String}(), Dict{String, $VI}(),
+                   0, Dict{Int64, String}(), Dict{String, $CI}(), Int[],
                    $(_getCV.(funs)...))
         end
 

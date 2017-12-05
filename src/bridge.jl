@@ -162,9 +162,9 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         struct $instancename{T, IT<:$MOI.AbstractInstance} <: $MOIU.AbstractBridgeInstance
             instance::IT
             bridged::$bridgedinstancename{T}
-            bridges::Dict{UInt64, $bridge{T}}
+            bridges::Dict{Int64, $bridge{T}}
             function $instancename{T}(instance::IT) where {T, IT <: $MOI.AbstractInstance}
-                new{T, IT}(instance, $bridgedinstancename{T}(), Dict{UInt64, $bridge{T}}())
+                new{T, IT}(instance, $bridgedinstancename{T}(), Dict{Int64, $bridge{T}}())
             end
         end
 
