@@ -287,6 +287,11 @@ macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvecto
 Creates a type `instancename` implementing the MOI instance interface and containing `scalarsets` scalar sets `typedscalarsets` typed scalar sets, `vectorsets` vector sets, `typedvectorsets` typed vector sets, `scalarfunctions` scalar functions, `typedscalarfunctions` typed scalar functions, `vectorfunctions` vector functions and `typedvectorfunctions` typed vector functions.
 To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 
+This implementation of the MOI instance certifies that the constraint indices, in addition to being different between constraints `F`-in-`S` for the same types `F` and `S`,
+are also different between constraints for different types `F` and `S`.
+This means that for constraint indices `ci1`, `ci2` of this instance, `ci1 == ci2` if and only if `ci1.value == vi2.value`.
+This fact can be used to use the the value of the index directly in a dictionary representing a mapping between constraint indices and something else.
+
 ### Examples
 
 The instance describing an linear program would be:
