@@ -146,6 +146,9 @@ end
 
 # Constraints
 function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    # We give the index value `nextconstraintid + 1` to the new constraint.
+    # As the same counter is used for all pairs of F-in-S constraints,
+    # the index value is unique across all constraint types as mentionned in `@instance`'s doc.
     ci = CI{F, S}(m.nextconstraintid += 1)
     # f needs to be copied, see #2
     push!(m.constrmap, _addconstraint!(m, ci, deepcopy(f), deepcopy(s)))
