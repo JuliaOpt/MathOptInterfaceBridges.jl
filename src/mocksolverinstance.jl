@@ -54,7 +54,6 @@ MOI.set!(mock::MockSolverInstance, ::MOI.ResultCount, value::Integer) = (mock.re
 MOI.set!(mock::MockSolverInstance, ::MOI.TerminationStatus, value::MOI.TerminationStatusCode) = (mock.terminationstatus = value)
 MOI.set!(mock::MockSolverInstance, ::MOI.ObjectiveValue, value::Real) = (mock.objectivevalue = value)
 MOI.set!(mock::MockSolverInstance, ::MOI.PrimalStatus, value::MOI.ResultStatusCode) = (mock.primalstatus = value)
-MOI.set!(mock::MockSolverInstance, ::MOI.DualStatus, value::MOI.ResultStatusCode) = (mock.dualstatus = value)
 MOI.set!(mock::MockSolverInstance, ::MockInstanceAttribute, value::Integer) = (mock.attribute = value)
 
 MOI.set!(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::MOI.VariableIndex, value) = (mock.varprimal[idx] = value)
@@ -96,7 +95,6 @@ MOI.get(mock::MockSolverInstance, ::MOI.ResultCount) = mock.resultcount
 MOI.get(mock::MockSolverInstance, ::MOI.TerminationStatus) = mock.terminationstatus
 MOI.get(mock::MockSolverInstance, ::MOI.ObjectiveValue) = mock.objectivevalue
 MOI.get(mock::MockSolverInstance, ::MOI.PrimalStatus) = mock.primalstatus
-MOI.get(mock::MockSolverInstance, ::MOI.DualStatus) = mock.dualstatus
 MOI.get(mock::MockSolverInstance, ::MockInstanceAttribute) = mock.attribute
 
 MOI.get(mock::MockSolverInstance, ::MockVariableAttribute, idx::MOI.VariableIndex) = mock.varattribute[idx]
