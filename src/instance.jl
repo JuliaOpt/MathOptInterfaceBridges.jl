@@ -93,9 +93,9 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableIndex)
         MOI.delete!(m, ci)
     end
     delete!(m.varindices, vr)
-    if haskey(m.varnames, vr.value)
-        delete!(m.namesvar, m.varnames[vr.value])
-        delete!(m.varnames, vr.value)
+    if haskey(m.varnames, vr)
+        delete!(m.namesvar, m.varnames[vr])
+        delete!(m.varnames, vr)
     end
 end
 
@@ -108,22 +108,22 @@ MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 # Names
 MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::VI) = MOI.isvalid(m, vi)
 function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vr::VI, name::String)
-    m.varnames[vr.value] = name
+    m.varnames[vr] = name
     m.namesvar[name] = vr
 end
 MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::VI) = true
-MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi.value, EMPTYSTRING)
+MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, EMPTYSTRING)
 
 MOI.canget(m::AbstractInstance, ::Type{VI}, name::String) = haskey(m.namesvar, name)
 MOI.get(m::AbstractInstance, ::Type{VI}, name::String) = m.namesvar[name]
 
 MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::CI) = true
 function MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
-    m.connames[ci.value] = name
+    m.connames[ci] = name
     m.namescon[name] = ci
 end
 MOI.canget(m::AbstractInstance, ::MOI.ConstraintName, ::CI) = true
-MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(m.connames, ci.value, EMPTYSTRING)
+MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(m.connames, ci, EMPTYSTRING)
 
 MOI.canget(m::AbstractInstance, ::Type{<:CI}, name::String) = haskey(m.namescon, name)
 MOI.get(m::AbstractInstance, ::Type{<:CI}, name::String) = m.namescon[name]
@@ -158,9 +158,9 @@ function MOI.delete!(m::AbstractInstance, ci::CI)
         m.constrmap[ci_next.value] -= 1
     end
     m.constrmap[ci.value] = 0
-    if haskey(m.connames, ci.value)
-        delete!(m.namescon, m.connames[ci.value])
-        delete!(m.connames, ci.value)
+    if haskey(m.connames, ci)
+        delete!(m.namescon, m.connames[ci])
+        delete!(m.connames, ci)
     end
 end
 
@@ -313,9 +313,11 @@ mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     objective::Union{MOI.SingleVariable, MOI.ScalarAffineFunction{T}, MOI.ScalarQuadraticFunction{T}}
     nextvariableid::Int64
     varindices::Vector{MOI.VariableIndex}
-    varnames::Dict{Int64, String}
+    varnames::Dict{MOI.VariableIndex, String}
     namesvar::Dict{String, Int64}
     nextconstraintid::Int64
+    connames::Dict{MOI.ConstraintIndex, String}
+    namescon::Dict{String, MOI.ConstraintIndex}
     constrmap::Vector{Int}
     singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
     scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
@@ -350,12 +352,12 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             sense::$MOI.OptimizationSense
             objective::Union{$MOI.SingleVariable, $MOI.ScalarAffineFunction{T}, $MOI.ScalarQuadraticFunction{T}}
             nextvariableid::Int64
-            varindices::Set{$MOI.VariableIndex}
-            varnames::Dict{Int64, String}
-            namesvar::Dict{String, $MOI.VariableIndex}
+            varindices::Set{$VI}
+            varnames::Dict{$VI, String}
+            namesvar::Dict{String, $VI}
             nextconstraintid::Int64
-            connames::Dict{Int64, String}
-            namescon::Dict{String, $MOI.ConstraintIndex}
+            connames::Dict{$CI, String}
+            namescon::Dict{String, $CI}
             constrmap::Vector{Int} # Constraint Reference value ci -> index in array in Constraints
         end
     end
@@ -422,8 +424,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         $instancedef
         function $instancename{T}() where T
             $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableIndex[], T[], zero(T)),
-                   0, Set{$VI}(), Dict{Int64, String}(), Dict{String, $VI}(),
-                   0, Dict{Int64, String}(), Dict{String, $CI}(), Int[],
+                   0, Set{$VI}(), Dict{$VI, String}(), Dict{String, $VI}(),
+                   0, Dict{$CI, String}(), Dict{String, $CI}(), Int[],
                    $(_getCV.(funs)...))
         end
 
