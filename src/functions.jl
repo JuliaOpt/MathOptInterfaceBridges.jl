@@ -1,5 +1,7 @@
 using Base.Test
 
+# TODO implements mapvariables
+
 # Cat for MOI sets
 affineoutputindex(f::MOI.ScalarAffineFunction) = ones(Int, length(f.variables))
 affineoutputindex(f::MOI.VectorAffineFunction) = f.outputindex

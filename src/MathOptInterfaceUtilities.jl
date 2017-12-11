@@ -18,6 +18,7 @@ const CI = MOI.ConstraintIndex
 
 include("functions.jl")
 include("sets.jl")
+include("copy.jl")
 
 include("instance.jl")
 include("parser.jl")
