@@ -21,6 +21,7 @@ include("sets.jl")
 
 include("instance.jl")
 include("parser.jl")
+include("mocksolverinstance.jl")
 
 include("bridge.jl")
 include("intervalbridge.jl")
