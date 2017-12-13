@@ -13,6 +13,11 @@ function _delete!(constrs::Vector, ci::CI, i::Int)
     @view constrs[i:end] # will need to shift it in constrmap
 end
 
+_getindex(ci::CI, f::MOI.AbstractFunction, s::MOI.AbstractSet) = ci
+function _getindex(constrs::Vector, ci::CI, i::Int)
+    _getindex(constrs[i]...)
+end
+
 _getfun(ci::CI, f::MOI.AbstractFunction, s::MOI.AbstractSet) = f
 function _getfunction(constrs::Vector, ci::CI, i::Int)
     @assert ci.value == constrs[i][1].value
@@ -33,6 +38,8 @@ function _modifyconstraint!{F, S}(constrs::Vector{C{F, S}}, ci::CI{F}, i::Int, c
 end
 
 _getnoc{F, S}(constrs::Vector{C{F, S}}, noc::MOI.NumberOfConstraints{F, S}) = length(constrs)
+# Might be called when calling NumberOfConstraint with different coefficient type than the one supported
+_getnoc(constrs::Vector, noc::MOI.NumberOfConstraints) = 0
 
 function _getloc{F, S}(constrs::Vector{C{F, S}})::Vector{Tuple{DataType, DataType}}
     isempty(constrs) ? [] : [(F, S)]
@@ -99,7 +106,20 @@ function MOI.delete!(m::AbstractInstance, vr::MOI.VariableIndex)
     end
 end
 
-MOI.isvalid(m::AbstractInstance, ci::CI) = !iszero(m.constrmap[ci.value])
+function MOI.isvalid(m::AbstractInstance, ci::CI{F, S}) where {F, S}
+    if ci.value > length(m.constrmap)
+        false
+    else
+        loc = getconstrloc(m, ci)
+        if iszero(loc) # This means that it has been deleted
+            false
+        elseif loc > MOI.get(m, MOI.NumberOfConstraints{F, S}())
+            false
+        else
+            ci == _getindex(m, ci, getconstrloc(m, ci))
+        end
+    end
+end
 MOI.isvalid(m::AbstractInstance, vi::VI) = in(vi, m.varindices)
 
 MOI.get(m::AbstractInstance, ::MOI.ListOfVariableIndices) = collect(m.varindices)
@@ -395,7 +415,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         end
     end
 
-    for (func, T) in ((:_addconstraint!, CI), (:_modifyconstraint!, CI), (:_delete!, CI), (:_getfunction, CI), (:_getset, CI), (:_getnoc, MathOptInterface.NumberOfConstraints))
+    for (func, T) in ((:_addconstraint!, CI), (:_modifyconstraint!, CI), (:_delete!, CI), (:_getindex, CI), (:_getfunction, CI), (:_getset, CI), (:_getnoc, MathOptInterface.NumberOfConstraints))
         funct = _mod(MathOptInterfaceUtilities, func)
         for (c, ss) in ((scname, scalarsets), (vcname, vectorsets))
             for s in ss
