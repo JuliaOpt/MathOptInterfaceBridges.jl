@@ -1,6 +1,11 @@
 using Base.Test
 
-# TODO implements mapvariables
+mapvariables(varmap, f::MOI.SingleVariable) = MOI.SingleVariable(varmap[f.variable])
+mapvariables(varmap, f::MOI.VectorOfVariables) = MOI.VectorOfVariables(getindex.(varmap, f.variables))
+mapvariables(varmap, f::MOI.ScalarAffineFunction) = MOI.ScalarAffineFunction(getindex.(varmap, f.variables), f.coefficients, f.constant)
+mapvariables(varmap, f::MOI.VectorAffineFunction) = MOI.VectorAffineFunction(f.outputindex, getindex.(varmap, f.variables), f.coefficients, f.constant)
+mapvariables(varmap, f::MOI.ScalarQuadraticFunction) = MOI.ScalarQuadraticFunction(getindex.(varmap, f.affine_variables), f.affine_coefficients, getindex.(varmap, f.quadratic_rowvariables), getindex.(varmap, f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
+mapvariables(varmap, f::MOI.VectorQuadraticFunction) = MOI.VectorQuadraticFunction(f.affine_outputindex, getindex.(varmap, f.affine_variables), f.affine_coefficients, f.quadratic_outputindex, getindex.(varmap, f.quadratic_rowvariables), getindex.(varmap, f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
 
 # Cat for MOI sets
 affineoutputindex(f::MOI.ScalarAffineFunction) = ones(Int, length(f.variables))

@@ -1,31 +1,31 @@
 struct IndexMap
-    varmap::Dict{VariableIndex, VariableIndex}
-    conmap::Dict{ConstraintIndex, ConstraintIndex}
-    IndexMap() = new(Dict{VariableIndex, VariableIndex}(),
-                     Dict{ConstraintIndex, ConstraintIndex}())
+    varmap::Dict{MOI.VariableIndex, MOI.VariableIndex}
+    conmap::Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}
+    IndexMap() = new(Dict{MOI.VariableIndex, MOI.VariableIndex}(),
+                     Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}())
 end
-Base.getindex(idxmap::IndexMap, ci::VariableIndex) = idxmap.varmap[ci]
-function Base.getindex(idxmap::IndexMap, ci::ConstraintIndex{F, S}) where {F, S}
-    idxmap.conmap[ci]::ConstraintIndex{F, S}
+Base.getindex(idxmap::IndexMap, ci::MOI.VariableIndex) = idxmap.varmap[ci]
+function Base.getindex(idxmap::IndexMap, ci::MOI.ConstraintIndex{F, S}) where {F, S}
+    idxmap.conmap[ci]::MOI.ConstraintIndex{F, S}
 end
 
 """
-    copyconstraints!(dest::AbstractInstance, src::AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
 
 Copy the constraints of type `F`-in-`S` from the instance `src` the instance `dest` and fill `idxmap` accordingly.
 """
-function copyconstraints!(dest::AbstractInstance, src::AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+function copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     for ci_src in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
         f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        ci_dest = MOI.addconstraint!(dest, f, s)
+        ci_dest = MOI.addconstraint!(dest, f_dest, s)
         idxmap.conmap[ci_src] = ci_dest
     end
 end
 
-function copy!(dest::AbstractInstance, src::AbstractInstance)
-    empty!(dest)
+function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
+    MOI.empty!(dest)
 
     idxmap = IndexMap()
 
@@ -38,8 +38,10 @@ function copy!(dest::AbstractInstance, src::AbstractInstance)
     obj_dest = mapvariables(idxmap, obj_src)
     MOI.set!(dest, MOI.ObjectiveFunction(), obj_dest)
 
-    for (F, S) in MOI.get(m.instance, MOI.ListOfConstraints())
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
         copyconstraints!(dest, src, idxmap, F, S)
     end
+
+    idxmap
 end

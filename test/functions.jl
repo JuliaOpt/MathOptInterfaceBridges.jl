@@ -3,6 +3,23 @@
     x = MOI.VariableIndex(1)
     y = MOI.VariableIndex(2)
     z = MOI.VariableIndex(3)
+    @testset "mapvariables" begin
+        fsq = MOI.ScalarQuadraticFunction([x, y], ones(2), [x, w, w], [z, z, y], ones(3), -3.0)
+        gsq = MOIU.mapvariables(Dict(x => y, y => z, w => w, z => x), fsq)
+        @test gsq.constant == -3.
+        fvq = MOI.VectorQuadraticFunction([2, 1], [x, y], ones(2), [1, 2, 2], [x, w, w], [z, z, y], ones(3), [-3.0, -2.0])
+        gvq = MOIU.mapvariables(Dict(x => y, y => z, w => w, z => x), fvq)
+        @test gvq.affine_outputindex == [2, 1]
+        @test gvq.quadratic_outputindex == [1, 2, 2]
+        @test gvq.constant == [-3., -2.]
+        for g in (gsq, gvq)
+            @test g.affine_variables == [y, z]
+            @test g.affine_coefficients == ones(2)
+            @test g.quadratic_rowvariables == [y, w, w]
+            @test g.quadratic_colvariables == [x, x, z]
+            @test g.quadratic_coefficients == ones(3)
+        end
+    end
     @testset "Conversion VectorOfVariables -> VectorAffineFunction" begin
         f = MOI.VectorAffineFunction{Int}(MOI.VectorOfVariables([z, x, y]))
         @test f isa MOI.VectorAffineFunction{Int}
