@@ -345,40 +345,40 @@ function test_instances_equal(instance1::MOI.AbstractInstance, instance2::MOI.Ab
 end
 
 
-function _rmvar(vrs::Vector{MOI.VariableIndex}, vr::MOI.VariableIndex)
-    find(v -> v != vr, vrs)
+function _rmvar(vis::Vector{MOI.VariableIndex}, vi::MOI.VariableIndex)
+    find(v -> v != vi, vis)
 end
-function _rmvar(vrs1::Vector{MOI.VariableIndex}, vrs2::Vector{MOI.VariableIndex}, vr::MOI.VariableIndex)
-    @assert eachindex(vrs1) == eachindex(vrs2)
-    find(i -> vrs1[i] != vr && vrs2[i] != vr, eachindex(vrs1))
+function _rmvar(vis1::Vector{MOI.VariableIndex}, vis2::Vector{MOI.VariableIndex}, vi::MOI.VariableIndex)
+    @assert eachindex(vis1) == eachindex(vis2)
+    find(i -> vis1[i] != vi && vis2[i] != vi, eachindex(vis1))
 end
 
 """
-    removevariable(f::AbstractFunction, vr::VariableIndex)
+    removevariable(f::AbstractFunction, vi::VariableIndex)
 
-Return a new function `f` with the variable vr removed.
+Return a new function `f` with the variable vi removed.
 """
-function removevariable(f::MOI.VectorOfVariables, vr)
-    MOI.VectorOfVariables(f.variables[_rmvar(f.variables, vr)])
+function removevariable(f::MOI.VectorOfVariables, vi)
+    MOI.VectorOfVariables(f.variables[_rmvar(f.variables, vi)])
 end
-function removevariable(f::MOI.ScalarAffineFunction, vr)
-    I = _rmvar(f.variables, vr)
+function removevariable(f::MOI.ScalarAffineFunction, vi)
+    I = _rmvar(f.variables, vi)
     MOI.ScalarAffineFunction(f.variables[I], f.coefficients[I], f.constant)
 end
-function removevariable(f::MOI.ScalarQuadraticFunction, vr)
-    I = _rmvar(f.affine_variables, vr)
-    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vr)
+function removevariable(f::MOI.ScalarQuadraticFunction, vi)
+    I = _rmvar(f.affine_variables, vi)
+    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vi)
     MOI.ScalarQuadraticFunction(f.affine_variables[I], f.affine_coefficients[I],
                                 f.quadratic_rowvariables[J], f.quadratic_colvariables[J], f.quadratic_coefficients[J],
                                 f.constant)
 end
-function removevariable(f::MOI.VectorAffineFunction, vr)
-    I = _rmvar(f.variables, vr)
+function removevariable(f::MOI.VectorAffineFunction, vi)
+    I = _rmvar(f.variables, vi)
     MOI.VectorAffineFunction(f.outputindex[I], f.variables[I], f.coefficients[I], f.constant)
 end
-function removevariable(f::MOI.VectorQuadraticFunction, vr)
-    I = _rmvar(f.affine_variables, vr)
-    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vr)
+function removevariable(f::MOI.VectorQuadraticFunction, vi)
+    I = _rmvar(f.affine_variables, vi)
+    J = _rmvar(f.quadratic_rowvariables, f.quadratic_colvariables, vi)
     MOI.VectorQuadraticFunction(f.affine_outputindex[I], f.affine_variables[I], f.affine_coefficients[I],
                                 f.quadratic_outputindex[J], f.quadratic_rowvariables[J], f.quadratic_colvariables[J], f.quadratic_coefficients[J],
                                 f.constant)

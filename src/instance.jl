@@ -82,27 +82,27 @@ function _removevar!(constrs::Vector, vi::VI)
     end
     []
 end
-function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vr::VI)
+function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vi::VI)
     # If a variable is removed, the SingleVariable constraints using this variable
     # need to be removed too
     rm = []
     for (ci, f, s) in constrs
-        if f.variable == vr
+        if f.variable == vi
             push!(rm, ci)
         end
     end
     rm
 end
-function MOI.delete!(m::AbstractInstance, vr::VI)
-    m.objective = removevariable(m.objective, vr)
-    rm = broadcastvcat(constrs -> _removevar!(constrs, vr), m)
+function MOI.delete!(m::AbstractInstance, vi::VI)
+    m.objective = removevariable(m.objective, vi)
+    rm = broadcastvcat(constrs -> _removevar!(constrs, vi), m)
     for ci in rm
         MOI.delete!(m, ci)
     end
-    delete!(m.varindices, vr)
-    if haskey(m.varnames, vr)
-        delete!(m.namesvar, m.varnames[vr])
-        delete!(m.varnames, vr)
+    delete!(m.varindices, vi)
+    if haskey(m.varnames, vi)
+        delete!(m.namesvar, m.varnames[vi])
+        delete!(m.varnames, vi)
     end
 end
 
@@ -127,9 +127,9 @@ MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 
 # Names
 MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::VI) = MOI.isvalid(m, vi)
-function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vr::VI, name::String)
-    m.varnames[vr] = name
-    m.namesvar[name] = vr
+function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
+    m.varnames[vi] = name
+    m.namesvar[name] = vi
 end
 MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::VI) = true
 MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, EMPTYSTRING)
