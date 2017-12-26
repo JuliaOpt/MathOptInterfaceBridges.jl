@@ -90,3 +90,100 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
 
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
+
+"""
+    allocatevariables!(instance::MOI.AbstractInstance, nvars::Integer)
+
+Creates `nvars` variables and returns a vector of `nvars` variable indices.
+"""
+function allocatevariables! end
+
+"""
+    allocateobjective!(instance::MOI.AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
+
+Informs `instance` that `loadobjective!` will be called with the same arguments after `loadvariables!` is called.
+"""
+function allocateobjective! end
+
+"""
+    allocateconstraint!(instance::MOI.AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
+
+Returns the index for the constraint to be used in `loadconstraint!` that will be called after `loadvariables!`.
+"""
+function allocateconstraint! end
+
+"""
+    loadvariables!(instance::MOI.AbstractInstance, nvars::Integer)
+
+Prepares the `instance` for `loadobjective!` and `loadconstraint!`.
+"""
+function loadvariables! end
+
+"""
+    loadobjective!(instance::MOI.AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
+
+Sets the objective function to `f` and the objective sense to `sense`.
+"""
+function loadobjective! end
+
+"""
+    loadconstraint!(instance::MOI.AbstractInstance, ci::MOI.ConstraintIndex, f::MOI.AbstractFunction, s::MOI.AbstractSet)
+
+Sets the constraint function and set for the constraint of index `ci`.
+"""
+function loadconstraint! end
+
+function allocateconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    for ci_src in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+        f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
+        f_dest = mapvariables(idxmap, f_src)
+        s = MOI.get(src, MOI.ConstraintSet(), ci_src)
+        ci_dest = allocateconstraint!(dest, f_dest, s)
+        idxmap.conmap[ci_src] = ci_dest
+    end
+end
+
+function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    for ci_src in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+        ci_dest = idxmap[ci_src]
+        f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
+        f_dest = mapvariables(idxmap, f_src)
+        s = MOI.get(src, MOI.ConstraintSet(), ci_src)
+        loadconstraint!(dest, ci_dest, f_dest, s)
+    end
+end
+
+function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
+    MOI.empty!(dest)
+
+    idxmap = IndexMap()
+
+    nvars = MOI.get(src, MOI.NumberOfVariables())
+    vars_src = MOI.get(src, MOI.ListOfVariableIndices())
+    vars_dest = allocatevariables!(dest, nvars)
+    for (var_src, var_dest) in zip(vars_src, vars_dest)
+        idxmap.varmap[var_src] = var_dest
+    end
+
+    obj_sense = MOI.get(src, MOI.ObjectiveSense())
+    obj_src = MOI.get(src, MOI.ObjectiveFunction())
+    obj_dest = mapvariables(idxmap, obj_src)
+
+    allocateobjective!(dest, obj_sense, obj_dest)
+
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+        # do the rest in copyconstraints! which is type stable
+        allocateconstraints!(dest, src, idxmap, F, S)
+    end
+
+    loadvariables!(dest, nvars)
+
+    loadobjective!(dest, obj_sense, obj_dest)
+
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+        # do the rest in copyconstraints! which is type stable
+        loadconstraints!(dest, src, idxmap, F, S)
+    end
+
+    idxmap
+end
