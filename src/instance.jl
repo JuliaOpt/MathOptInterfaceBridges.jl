@@ -289,9 +289,10 @@ _set(s::SymbolSet) = _moi(s.s)
 _fun(s::SymbolFun) = _moi(s.s)
 
 # Base.lowercase is moved to Unicode.lowercase in Julia v0.7
-#_field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
-# Let's keep it simple for now and field with upper case name for now
-_field(s::SymbolFS) = s.s
+if VERSION >= v"0.7.0-DEV.2813"
+    using Unicode
+end
+_field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
 
 function _getC(s::SymbolSet)
     if s.typed
@@ -337,15 +338,15 @@ Let `MOI` denote `MathOptInterface`, `MOIU` denote `MathOptInterfaceUtilities` a
 The macro would create the types:
 ```julia
 struct LPInstanceScalarConstraints{T, F <: MOI.AbstractScalarFunction} <: MOIU.Constraints{F}
-    EqualTo::Vector{MOIU.C{F, MOI.EqualTo{T}}}
-    GreaterThan::Vector{MOIU.C{F, MOI.GreaterThan{T}}}
-    LessThan::Vector{MOIU.C{F, MOI.LessThan{T}}}
-    Interval::Vector{MOIU.C{F, MOI.Interval{T}}}
+    equalto::Vector{MOIU.C{F, MOI.EqualTo{T}}}
+    greaterthan::Vector{MOIU.C{F, MOI.GreaterThan{T}}}
+    lessthan::Vector{MOIU.C{F, MOI.LessThan{T}}}
+    interval::Vector{MOIU.C{F, MOI.Interval{T}}}
 end
 struct LPInstanceVectorConstraints{T, F <: MOI.AbstractVectorFunction} <: MOIU.Constraints{F}
-    Zeros::Vector{MOIU.C{F, MOI.Zeros}}
-    Nonnegatives::Vector{MOIU.C{F, MOI.Nonnegatives}}
-    Nonpositives::Vector{MOIU.C{F, MOI.Nonpositives}}
+    zeros::Vector{MOIU.C{F, MOI.Zeros}}
+    nonnegatives::Vector{MOIU.C{F, MOI.Nonnegatives}}
+    nonpositives::Vector{MOIU.C{F, MOI.Nonpositives}}
 end
 mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     sense::MOI.OptimizationSense
@@ -358,10 +359,10 @@ mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     connames::Dict{MOI.ConstraintIndex, String}
     namescon::Dict{String, MOI.ConstraintIndex}
     constrmap::Vector{Int}
-    SingleVariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
-    ScalarAffineFunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
-    VectorOfVariables::LPInstanceVectorConstraints{T, MOI.VectorOfVariables}
-    VectorAffineFunction::LPInstanceVectorConstraints{T, MOI.VectorAffineFunction{T}}
+    singlevariable::LPInstanceScalarConstraints{T, MOI.SingleVariable}
+    scalaraffinefunction::LPInstanceScalarConstraints{T, MOI.ScalarAffineFunction{T}}
+    vectorofvariables::LPInstanceVectorConstraints{T, MOI.VectorOfVariables}
+    vectoraffinefunction::LPInstanceVectorConstraints{T, MOI.VectorAffineFunction{T}}
 end
 ```
 The type `LPInstance` implements the MathOptInterface API except methods specific to solver instances like `optimize!` or `getattribute` with `VariablePrimal`.
