@@ -21,6 +21,14 @@ end
     MOIT.validtest(Instance{Float64}())
 end
 
+@testset "Empty test" begin
+    MOIT.emptytest(Instance{Float64}())
+end
+
+@testset "Copy test" begin
+    MOIT.copytest(Instance{Float64}(), Instance{Float64}())
+end
+
 # Taken from MOI/test/contlinear.jl
 @testset "Basic solve, query, resolve" begin
     # simple 2 variable, 1 constraint problem

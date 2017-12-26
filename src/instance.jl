@@ -56,7 +56,7 @@ getconstrloc(m::AbstractInstance, ci::CI) = m.constrmap[ci.value]
 # Variables
 MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = length(m.varindices)
 function MOI.addvariable!(m::AbstractInstance)
-    v = MOI.VariableIndex(m.nextvariableid += 1)
+    v = VI(m.nextvariableid += 1)
     push!(m.varindices, v)
     v
 end
@@ -76,33 +76,33 @@ function _removevar(ci::CI, f::MOI.VectorOfVariables, s, vi::VI)
     end
     (ci, g, t)
 end
-function _removevar!(constrs::Vector, vr::MOI.VariableIndex)
+function _removevar!(constrs::Vector, vi::VI)
     for i in eachindex(constrs)
-        constrs[i] = _removevar(constrs[i]..., vr)
+        constrs[i] = _removevar(constrs[i]..., vi)
     end
     []
 end
-function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vr::MOI.VariableIndex)
+function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vi::VI)
     # If a variable is removed, the SingleVariable constraints using this variable
     # need to be removed too
     rm = []
     for (ci, f, s) in constrs
-        if f.variable == vr
+        if f.variable == vi
             push!(rm, ci)
         end
     end
     rm
 end
-function MOI.delete!(m::AbstractInstance, vr::MOI.VariableIndex)
-    m.objective = removevariable(m.objective, vr)
-    rm = broadcastvcat(constrs -> _removevar!(constrs, vr), m)
+function MOI.delete!(m::AbstractInstance, vi::VI)
+    m.objective = removevariable(m.objective, vi)
+    rm = broadcastvcat(constrs -> _removevar!(constrs, vi), m)
     for ci in rm
         MOI.delete!(m, ci)
     end
-    delete!(m.varindices, vr)
-    if haskey(m.varnames, vr)
-        delete!(m.namesvar, m.varnames[vr])
-        delete!(m.varnames, vr)
+    delete!(m.varindices, vi)
+    if haskey(m.varnames, vi)
+        delete!(m.namesvar, m.varnames[vi])
+        delete!(m.varnames, vi)
     end
 end
 
@@ -127,9 +127,9 @@ MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 
 # Names
 MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::VI) = MOI.isvalid(m, vi)
-function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vr::VI, name::String)
-    m.varnames[vr] = name
-    m.namesvar[name] = vr
+function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
+    m.varnames[vi] = name
+    m.namesvar[name] = vi
 end
 MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::VI) = true
 MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, EMPTYSTRING)
@@ -220,6 +220,14 @@ function MOI.get(m::AbstractInstance, ::MOI.ConstraintSet, ci::CI)
     _getset(m, ci, getconstrloc(m, ci))
 end
 
+function MOI.isempty(m::AbstractInstance)
+    m.sense == MOI.FeasibilitySense &&
+    isempty(m.objective.variables) && isempty(m.objective.coefficients) && iszero(m.objective.constant) &&
+    iszero(m.nextvariableid) && iszero(m.nextconstraintid)
+end
+
+MOI.copy!(dest::AbstractInstance, src::MOI.AbstractInstance) = defaultcopy!(dest, src)
+
 # Can be used to access constraints of an instance
 """
 broadcastcall(f::Function, m::AbstractInstance)
@@ -280,6 +288,10 @@ _moi(s::Symbol) = _mod(MOI, s)
 _set(s::SymbolSet) = _moi(s.s)
 _fun(s::SymbolFun) = _moi(s.s)
 
+# Base.lowercase is moved to Unicode.lowercase in Julia v0.7
+if VERSION >= v"0.7.0-DEV.2813"
+    using Unicode
+end
 _field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
 
 function _getC(s::SymbolSet)
@@ -402,6 +414,19 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
         function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$instancename)
             vcat($(_broadcastfield.(:(MathOptInterfaceUtilities.broadcastvcat), funs)...))
         end
+        function $MOI.empty!(m::$instancename{T}) where T
+            m.sense = $MOI.FeasibilitySense
+            m.objective = $SAF{T}($VI[], T[], zero(T))
+            m.nextvariableid = 0
+            m.varindices = Set{$VI}()
+            m.varnames = Dict{Int64, String}()
+            m.namesvar = Dict{String, $VI}()
+            m.nextconstraintid = 0
+            m.connames = Dict{Int64, String}()
+            m.namescon = Dict{String, $CI}()
+            m.constrmap = Int[]
+            $(Expr(:block, _callfield.(:($MOI.empty!), funs)...))
+        end
     end
     for (cname, sets) in ((scname, scalarsets), (vcname, vectorsets))
         code = quote
@@ -412,10 +437,13 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$cname)
                 vcat($(_callfield.(:f, sets)...))
             end
+            function $MOI.empty!(m::$cname)
+                $(Expr(:block, _callfield.(:(Base.empty!), sets)...))
+            end
         end
     end
 
-    for (func, T) in ((:_addconstraint!, CI), (:_modifyconstraint!, CI), (:_delete!, CI), (:_getindex, CI), (:_getfunction, CI), (:_getset, CI), (:_getnoc, MathOptInterface.NumberOfConstraints))
+    for (func, T) in ((:_addconstraint!, CI), (:_modifyconstraint!, CI), (:_delete!, CI), (:_getindex, CI), (:_getfunction, CI), (:_getset, CI), (:_getnoc, MOI.NumberOfConstraints))
         funct = _mod(MathOptInterfaceUtilities, func)
         for (c, ss) in ((scname, scalarsets), (vcname, vectorsets))
             for s in ss
@@ -451,7 +479,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
 
         $instancedef
         function $instancename{T}() where T
-            $instancename{T}(MathOptInterface.FeasibilitySense, MathOptInterfaceUtilities.SAF{T}(MathOptInterface.VariableIndex[], T[], zero(T)),
+            $instancename{T}($MOI.FeasibilitySense, $SAF{T}($VI[], T[], zero(T)),
                    0, Set{$VI}(), Dict{$VI, String}(), Dict{String, $VI}(),
                    0, Dict{$CI, String}(), Dict{String, $CI}(), Int[],
                    $(_getCV.(funs)...))
