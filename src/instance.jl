@@ -224,6 +224,9 @@ MOI.canget(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                         MOI.ObjectiveFunction,
                                         MOI.ObjectiveSense}) = true
 
+MOI.canset(m::AbstractInstance, ::Union{MOI.ObjectiveFunction,
+                                        MOI.ObjectiveSense}) = true
+
 MOI.canget(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
                                         MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
 

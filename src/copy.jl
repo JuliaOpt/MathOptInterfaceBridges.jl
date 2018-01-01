@@ -1,13 +1,20 @@
 struct IndexMap
     varmap::Dict{MOI.VariableIndex, MOI.VariableIndex}
     conmap::Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}
-    IndexMap() = new(Dict{MOI.VariableIndex, MOI.VariableIndex}(),
-                     Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}())
 end
-Base.getindex(idxmap::IndexMap, ci::MOI.VariableIndex) = idxmap.varmap[ci]
+IndexMap() = IndexMap(Dict{MOI.VariableIndex, MOI.VariableIndex}(),
+                 Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}())
+Base.getindex(idxmap::IndexMap, vi::MOI.VariableIndex) = idxmap.varmap[vi]
 function Base.getindex(idxmap::IndexMap, ci::MOI.ConstraintIndex{F, S}) where {F, S}
     idxmap.conmap[ci]::MOI.ConstraintIndex{F, S}
 end
+
+Base.setindex!(idxmap::IndexMap, vi1::MOI.VariableIndex, vi2::MOI.VariableIndex) = Base.setindex!(idxmap.varmap, vi1, vi2)
+function Base.setindex!(idxmap::IndexMap, ci1::MOI.ConstraintIndex{F, S}, ci2::MOI.ConstraintIndex{F, S}) where {F, S}
+    Base.setindex!(idxmap.conmap, ci1, ci2)
+end
+
+Base.keys(idxmap::IndexMap) = Iterators.flatten((keys(idxmap.varmap), keys(idxmap.conmap)))
 
 """
     copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
