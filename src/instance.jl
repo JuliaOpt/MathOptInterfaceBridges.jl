@@ -285,9 +285,9 @@ end
 # Expr(:., MOI, :($s)) would be Expr(:., MOI, :EqualTo)
 # Expr(:., MOI, :($(QuoteNode(s)))) is Expr(:., MOI, :(:EqualTo)) <- what we want
 
-# _mod(MOI, :Zeros) -> :(MOI.Zeros)
+# (MOI, :Zeros) -> :(MOI.Zeros)
 _mod(m::Module, s::Symbol) = Expr(:., m, :($(QuoteNode(s))))
-# _moi(:Zeros) -> :(MOI.Zeros)
+# (:Zeros) -> :(MOI.Zeros)
 _moi(s::Symbol) = _mod(MOI, s)
 _set(s::SymbolSet) = _moi(s.s)
 _fun(s::SymbolFun) = _moi(s.s)
