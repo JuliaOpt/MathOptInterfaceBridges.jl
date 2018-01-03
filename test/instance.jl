@@ -29,6 +29,11 @@ end
     MOIT.copytest(Instance{Float64}(), Instance{Float64}())
 end
 
+@testset "canaddconstraint test" begin
+    MOIT.canaddconstrainttest(Instance{Float64}(), Float64, Int)
+    MOIT.canaddconstrainttest(Instance{Int}(), Int, Float64)
+end
+
 const solver = () -> Instance{Float64}()
 # Only config.query is true as MOI.optimize! is not implemented
 const config = MOIT.TestConfig(0., 0., false, true, false, false)

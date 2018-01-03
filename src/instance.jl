@@ -165,6 +165,7 @@ function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionM
 end
 
 # Constraints
+MOI.canaddconstraint(instance::AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = false
 function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     # We give the index value `nextconstraintid + 1` to the new constraint.
     # As the same counter is used for all pairs of F-in-S constraints,
@@ -283,25 +284,21 @@ end
 # Expr(:., MOI, $s) would be Expr(:., MOI, EqualTo)
 # Expr(:., MOI, :($s)) would be Expr(:., MOI, :EqualTo)
 # Expr(:., MOI, :($(QuoteNode(s)))) is Expr(:., MOI, :(:EqualTo)) <- what we want
-_mod(m, s::Symbol) = Expr(:., m, :($(QuoteNode(s))))
+
+# (MOI, :Zeros) -> :(MOI.Zeros)
+_mod(m::Module, s::Symbol) = Expr(:., m, :($(QuoteNode(s))))
+# (:Zeros) -> :(MOI.Zeros)
 _moi(s::Symbol) = _mod(MOI, s)
 _set(s::SymbolSet) = _moi(s.s)
 _fun(s::SymbolFun) = _moi(s.s)
-
-# Base.lowercase is moved to Unicode.lowercase in Julia v0.7
-if VERSION >= v"0.7.0-DEV.2813"
-    using Unicode
-end
-_field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
-
-function _getC(s::SymbolSet)
+function _typedset(s::SymbolSet)
     if s.typed
-        :($MOIU.C{F, $(_set(s)){T}})
+        :($(_set(s)){T})
     else
-        :($MOIU.C{F, $(_set(s))})
+        _set(s)
     end
 end
-function _getC(s::SymbolFun)
+function _typedfun(s::SymbolFun)
     if s.typed
         :($(_fun(s)){T})
     else
@@ -309,6 +306,14 @@ function _getC(s::SymbolFun)
     end
 end
 
+# Base.lowercase is moved to Unicode.lowercase in Julia v0.7
+if VERSION >= v"0.7.0-DEV.2813"
+    using Unicode
+end
+_field(s::SymbolFS) = Symbol(lowercase(string(s.s)))
+
+_getC(s::SymbolSet) = :($MOIU.C{F, $(_typedset(s))})
+_getC(s::SymbolFun) = _typedfun(s)
 
 _getCV(s::SymbolSet) = :($(_getC(s))[])
 _getCV(s::SymbolFun) = :($(s.cname){T, $(_getC(s))}())
@@ -484,6 +489,9 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
                    0, Dict{$CI, String}(), Dict{String, $CI}(), Int[],
                    $(_getCV.(funs)...))
         end
+
+        MOI.canaddconstraint(instance::$instancename{T}, f::Union{$(_typedfun.(scalarfuns)...)}, s::Union{$(_typedset.(scalarsets)...)}) where T = true
+        MOI.canaddconstraint(instance::$instancename{T}, f::Union{$(_typedfun.(vectorfuns)...)}, s::Union{$(_typedset.(vectorsets)...)}) where T = true
 
         $code
 
