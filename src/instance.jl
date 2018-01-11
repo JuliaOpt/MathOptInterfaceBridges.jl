@@ -211,7 +211,7 @@ MOI.canget(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                         MOI.ObjectiveSense}) = true
 
 MOI.canget(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
-                                        MOI.ConstraintSet}, index::MOI.Index) = true
+                                        MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
 
 function MOI.get(m::AbstractInstance, ::MOI.ConstraintFunction, ci::CI)
     _getfunction(m, ci, getconstrloc(m, ci))
