@@ -36,15 +36,18 @@ end
 using MathOptInterfaceTests
 const MOIT = MathOptInterfaceTests
 
-config = MOIT.TestConfig(1e-7, 1e-7, false, true, true, true)
-
 MOIU.@bridge GeoMean MOIU.GeoMeanBridge () () (GeometricMeanCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
-@testset "GeoMeanBridge" begin
-    MOIT.geomeantest(() -> GeoMean{Float64}(SimpleInstance{Float64}()), config)
-end
+MOIU.@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 
-@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
-@testset "RootDetBridge" begin
-    MOIT.rootdet1tvtest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
-    MOIT.rootdet1tftest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+@testset "Bridge tests" begin
+    const config = MOIT.TestConfig(1e-7, 1e-7, false, true, true, true)
+
+    @testset "GeoMeanBridge" begin
+        MOIT.geomeantest(() -> GeoMean{Float64}(SimpleInstance{Float64}()), config)
+    end
+
+    @testset "RootDetBridge" begin
+        MOIT.rootdet1tvtest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+        MOIT.rootdet1tftest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+    end
 end
