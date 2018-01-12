@@ -137,6 +137,10 @@ MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, E
 MOI.canget(m::AbstractInstance, ::Type{VI}, name::String) = haskey(m.namesvar, name)
 MOI.get(m::AbstractInstance, ::Type{VI}, name::String) = m.namesvar[name]
 
+function MOI.get(instance::AbstractInstance, ::MOI.ListOfVariableAttributesSet)::Vector{MOI.AbstractVariableAttribute}
+    isempty(instance.varnames) ? [] : [MOI.VariableName()]
+end
+
 MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::CI) = true
 function MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
     m.connames[ci] = name
@@ -148,20 +152,30 @@ MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(m.connames, ci,
 MOI.canget(m::AbstractInstance, ::Type{<:CI}, name::String) = haskey(m.namescon, name)
 MOI.get(m::AbstractInstance, ::Type{<:CI}, name::String) = m.namescon[name]
 
+function MOI.get(instance::AbstractInstance, ::MOI.ListOfConstraintAttributesSet)::Vector{MOI.AbstractConstraintAttribute}
+    isempty(instance.connames) ? [] : [MOI.ConstraintName()]
+end
+
 # Objective
 MOI.get(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
+MOI.canset(m::AbstractInstance, ::MOI.ObjectiveSense) = true
+function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
+    m.sense = sense
+end
+MOI.get(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
+MOI.canset(m::AbstractInstance, ::MOI.ObjectiveFunction) = true
 function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
     # f needs to be copied, see #2
     m.objective = deepcopy(f)
-end
-MOI.get(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
-function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
-    m.sense = sense
 end
 
 MOI.canmodifyobjective(m::AbstractInstance, change::MOI.AbstractFunctionModification) = true
 function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionModification)
     m.objective = modifyfunction(m.objective, change)
+end
+
+function MOI.get(m::AbstractInstance, ::MOI.ListOfInstanceAttributesSet)::Vector{MOI.AbstractInstanceAttribute}
+    [MOI.ObjectiveSense(), MOI.ObjectiveFunction()]
 end
 
 # Constraints
