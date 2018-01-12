@@ -33,8 +33,7 @@ function copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
     cis_dest = map(ci -> idxmap[ci], cis_src)
     for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
         if MOI.canget(src, attr, CI{F, S})
-            if !MOI.canset(src, attr, CI{F, S})
-                @show attr
+            if !MOI.canset(dest, attr, CI{F, S})
                 return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
             end
             vector_of_values = MOI.get(src, attr, cis_src)
@@ -62,8 +61,7 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     vis_dest = map(vi -> idxmap[vi], vis_src)
     for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
         if MOI.canget(src, attr, VI)
-            if !MOI.canset(src, attr, VI)
-                @show attr
+            if !MOI.canset(dest, attr, VI)
                 return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
             end
             vector_of_values = MOI.get(src, attr, vis_src)
@@ -74,8 +72,7 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     # Copy instance attributes
     for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
         if MOI.canget(src, attr)
-            if !MOI.canset(src, attr)
-                @show attr
+            if !MOI.canset(dest, attr)
                 return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
             end
             MOI.set!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))

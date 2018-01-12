@@ -26,6 +26,10 @@ end
 end
 
 @testset "Copy test" begin
+    MOIT.failcopytestc(Instance{Float64}())
+    MOIT.failcopytestia(Instance{Float64}())
+    MOIT.failcopytestva(Instance{Float64}())
+    MOIT.failcopytestca(Instance{Float64}())
     MOIT.copytest(Instance{Float64}(), Instance{Float64}())
 end
 
