@@ -233,6 +233,12 @@ end
 # instance or the solver. Maybe we could consider a small whitelist of
 # attributes to handle automatically.
 
+# TODO/Warning: AttributeFromSolver is somewhat broken and dangerous because it
+# deals with objects indexed in terms of solver variables (if applicable).
+# This leads to surprising behavior when used with ObjectiveFunction() and other similar
+# attributes. Maybe we should process AbstractFunctions that are set/get
+# with AttributeFromSolver to map the indices from the instance to the solver.
+
 struct AttributeFromInstance{T <: MOI.AnyAttribute}
     attr::T
 end

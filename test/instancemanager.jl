@@ -11,7 +11,8 @@
     @test MOIU.state(m) == MOIU.EmptySolver
 
     v = MOI.addvariable!(m)
-    saf = MOI.ScalarAffineFunction([v], [1.0], 0.0)
+    x = MOI.addvariables!(m, 2)
+    saf = MOI.ScalarAffineFunction([v;x], [1.0,2.0,3.0], 0.0)
     @test MOI.canset(m, MOI.ObjectiveFunction())
     MOI.set!(m, MOI.ObjectiveFunction(), saf)
     @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction())) ≈ saf
@@ -20,7 +21,9 @@
 
     MOIU.attachsolver!(m)
     @test MOIU.state(m) == MOIU.AttachedSolver
-    @test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction())) ≈ saf
+    # This test is incorrect because ObjectiveFunction is returned in terms of
+    # the solver's variable indices.
+    #@test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction())) ≈ saf
 
     @test MOI.canset(m, MOI.ObjectiveSense())
     MOI.set!(m, MOI.ObjectiveSense(), MOI.MaxSense)
