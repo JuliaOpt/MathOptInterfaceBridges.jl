@@ -221,7 +221,7 @@ function MOI.canset(m::InstanceManager, attr::MOI.AbstractInstanceAttribute)
     return true
 end
 
-function MOI.canset(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, idxtype)
+function MOI.canset(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, idxtype::Type{<:MOI.Index})
     MOI.canset(m.instance, attr, idxtype) || return false
     if m.state == AttachedSolver && m.mode == Manual
         MOI.canset(m.solver, attr, idxtype) || return false
@@ -269,7 +269,7 @@ function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}) where {T
     return MOI.canget(m.instance, attr.attr)
 end
 
-function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype::Type{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     return MOI.canget(m.instance, attr.attr, idxtype)
 end
 
@@ -278,7 +278,7 @@ function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <
     return MOI.canget(m.solver, attr.attr)
 end
 
-function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype::Type{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
     return MOI.canget(m.solver, attr.attr, idxtype)
 end
@@ -308,7 +308,7 @@ function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}) where {T
     return MOI.canset(m.instance, attr.attr)
 end
 
-function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype::Type{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     return MOI.canset(m.instance, attr.attr, idxtype)
 end
 
@@ -317,7 +317,7 @@ function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <
     return MOI.canset(m.solver, attr.attr)
 end
 
-function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype::Type{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
     return MOI.canset(m.solver, attr.attr, idxtype)
 end

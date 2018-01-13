@@ -41,12 +41,12 @@
     @test MOI.get(m, MOIU.AttributeFromSolver(MOIU.MockInstanceAttribute())) == 10
 
     MOI.set!(m, MOIU.AttributeFromSolver(MOI.ResultCount()), 1)
-    @test MOI.canset(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v)
+    @test MOI.canset(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     MOI.set!(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v, 3.0)
 
     MOI.optimize!(m)
 
-    @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v)
+    @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
     # InstanceForMock doesn't support SecondOrderCone
@@ -91,12 +91,12 @@ end
     @test MOI.get(m, MOIU.AttributeFromSolver(MOIU.MockInstanceAttribute())) == 10
 
     MOI.set!(m, MOIU.AttributeFromSolver(MOI.ResultCount()), 1)
-    @test MOI.canset(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v)
+    @test MOI.canset(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     MOI.set!(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v, 3.0)
 
     MOI.optimize!(m)
 
-    @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v)
+    @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
     # InstanceForMock doesn't support SecondOrderCone
