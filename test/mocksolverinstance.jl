@@ -1,5 +1,5 @@
 
-@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle) () (SingleVariable,) (ScalarAffineFunction,ScalarQuadraticFunction) (VectorOfVariables,) (VectorAffineFunction,)
+@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) () ()
 
 
 @testset "Mock solver instance attributes" begin
@@ -10,23 +10,19 @@
     @test MOI.get(instance, MOIU.MockInstanceAttribute()) == 10
 
     v1 = MOI.addvariable!(instance)
-    @test MOI.canset(instance, MOIU.MockVariableAttribute(), v1)
+    @test MOI.canset(instance, MOIU.MockVariableAttribute(), typeof(v1))
     MOI.set!(instance, MOIU.MockVariableAttribute(), v1, 11)
-    @test MOI.canget(instance, MOIU.MockVariableAttribute(), v1)
+    @test MOI.canget(instance, MOIU.MockVariableAttribute(), typeof(v1))
     @test MOI.get(instance, MOIU.MockVariableAttribute(), v1) == 11
-    @test MOI.canset(instance, MOIU.MockVariableAttribute(), [v1])
     MOI.set!(instance, MOIU.MockVariableAttribute(), [v1], [-11])
-    @test MOI.canget(instance, MOIU.MockVariableAttribute(), [v1])
     @test MOI.get(instance, MOIU.MockVariableAttribute(), [v1]) == [-11]
 
     c1 = MOI.addconstraint!(instance, MOI.SingleVariable(v1), MOI.GreaterThan(1.0))
-    @test MOI.canset(instance, MOIU.MockConstraintAttribute(), c1)
+    @test MOI.canset(instance, MOIU.MockConstraintAttribute(), typeof(c1))
     MOI.set!(instance, MOIU.MockConstraintAttribute(), c1, 12)
-    @test MOI.canget(instance, MOIU.MockConstraintAttribute(), c1)
+    @test MOI.canget(instance, MOIU.MockConstraintAttribute(), typeof(c1))
     @test MOI.get(instance, MOIU.MockConstraintAttribute(), c1) == 12
-    @test MOI.canset(instance, MOIU.MockConstraintAttribute(), [c1])
     MOI.set!(instance, MOIU.MockConstraintAttribute(), [c1], [-12])
-    @test MOI.canget(instance, MOIU.MockConstraintAttribute(), [c1])
     @test MOI.get(instance, MOIU.MockConstraintAttribute(), [c1]) == [-12]
 end
 
@@ -46,7 +42,7 @@ end
     MOI.optimize!(instance)
     @test MOI.canget(instance, MOI.TerminationStatus())
     @test MOI.canget(instance, MOI.ResultCount())
-    @test !MOI.canget(instance, MOI.VariablePrimal(), v1)
+    @test !MOI.canget(instance, MOI.VariablePrimal(), typeof(v1))
     @test MOI.get(instance, MOI.TerminationStatus()) == MOI.InfeasibleNoResult
     @test MOI.get(instance, MOI.ResultCount()) == 0
 end
@@ -75,8 +71,7 @@ end
     @test MOI.canget(instance, MOI.ResultCount())
     @test MOI.canget(instance, MOI.ObjectiveValue())
     @test MOI.canget(instance, MOI.PrimalStatus())
-    @test MOI.canget(instance, MOI.VariablePrimal(), v)
-    @test MOI.canget(instance, MOI.VariablePrimal(), v[1])
+    @test MOI.canget(instance, MOI.VariablePrimal(), typeof(v[1]))
     @test MOI.get(instance, MOI.TerminationStatus()) == MOI.Success
     @test MOI.get(instance, MOI.ResultCount()) == 1
     @test MOI.get(instance, MOI.ObjectiveValue()) == 1.0
