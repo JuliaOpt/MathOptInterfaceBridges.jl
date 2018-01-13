@@ -98,33 +98,24 @@ end
 
 Attaches the solver, copying all instance data into it. Can be called only
 from the `EmptySolver` state. The `InstanceManager` will be in state `AttachedSolver`
-after the call.
+after the call. Returns an `MOI.CopyResult`. `MOI.CopySuccess` means that the
+solver is correctly attached, otherwise the status indicates why the `copy!`
+from the instance to the solver failed.
 """
 function attachsolver!(m::InstanceManager)
     @assert m.state == EmptySolver
-    index_map = MOI.copy!(m.solver, m.instance)
+    copy_result = MOI.copy!(m.solver, m.instance)
+    if copy_result.status != MOI.CopySuccess
+        return copy_result
+    end
     m.state = AttachedSolver
     # MOI does not define the type of index_map, so we have to copy it into a
     # concrete container.
     m.instancetosolvermap = IndexMap()
-    for k in keys(index_map)
-        m.instancetosolvermap[k] = index_map[k]
+    for k in keys(copy_result.indexmap)
+        m.instancetosolvermap[k] = copy_result.indexmap[k]
     end
-    return
-end
-
-# TODO: We need to provide more detail about what causes `cancopy` to return false,
-# e.g., an error message saying which constraint type isn't supported.
-"""
-    canattachsolver(m::InstanceManager)
-
-Returns `true` if the solver reports that it `cancopy` from the instance.
-`false` typically means that the solver does not support the problem type
-stored in the instance. Can be called only from the `EmptySolver` state.
-"""
-function canattachsolver(m::InstanceManager)
-    @assert m.state == EmptySolver
-    return MOI.cancopy(m.solver, m.instance)
+    return copy_result
 end
 
 # Optimizing and adding/modifying constraints and variables.
@@ -205,12 +196,12 @@ function MOI.set!(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, value
 end
 
 function MOI.set!(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, ref, value)
-    if m.mode == Automatic && !MOI.canset(m.solver, attr, ref)
+    if m.mode == Automatic && !MOI.canset(m.solver, attr, typeof(ref))
         resetsolver!(m)
     end
     @assert MOI.canset(m.instance, attr, ref)
     if m.state == AttachedSolver
-        @assert MOI.canset(m.solver, attr, getindex.(m.instancetosolvermap,ref))
+        @assert MOI.canset(m.solver, attr, typeof(ref))
         MOI.set!(m.solver, attr, ref, value)
     end
     MOI.set!(m.instance, attr, ref, value)
@@ -230,10 +221,10 @@ function MOI.canset(m::InstanceManager, attr::MOI.AbstractInstanceAttribute)
     return true
 end
 
-function MOI.canset(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, ref)
-    MOI.canset(m.instance, attr, ref) || return false
+function MOI.canset(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, idxtype)
+    MOI.canset(m.instance, attr, idxtype) || return false
     if m.state == AttachedSolver && m.mode == Manual
-        MOI.canset(m.solver, attr, getindex.(m.instancetosolvermap,ref)) || return false
+        MOI.canset(m.solver, attr, idxtype) || return false
     end
     return true
 end
@@ -272,8 +263,8 @@ function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}) where {T
     return MOI.canget(m.instance, attr.attr)
 end
 
-function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
-    return MOI.canget(m.instance, attr.attr, idx)
+function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+    return MOI.canget(m.instance, attr.attr, idxtype)
 end
 
 function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <: MOI.AbstractInstanceAttribute}
@@ -281,9 +272,9 @@ function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <
     return MOI.canget(m.solver, attr.attr)
 end
 
-function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
-    return MOI.canget(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx))
+    return MOI.canget(m.solver, attr.attr, idxtype)
 end
 
 # These are expert methods. Usually you wouldn't want to set an attribute only
@@ -311,8 +302,8 @@ function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}) where {T
     return MOI.canset(m.instance, attr.attr)
 end
 
-function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
-    return MOI.canset(m.instance, attr.attr, idx)
+function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+    return MOI.canset(m.instance, attr.attr, idxtype)
 end
 
 function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <: MOI.AbstractInstanceAttribute}
@@ -320,9 +311,9 @@ function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <
     return MOI.canset(m.solver, attr.attr)
 end
 
-function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
-    return MOI.canset(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx))
+    return MOI.canset(m.solver, attr.attr, idxtype)
 end
 
 # TODO: get and set methods to look up/set name strings
