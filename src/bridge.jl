@@ -80,10 +80,19 @@ end
 for f in (:canget, :canset, :set!, :get, :get!)
     @eval begin
         MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute) = MOI.$f(b.instance, attr)
-        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, index::MOI.Index) = MOI.$f(b.instance, attr, index)
-        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, indices::Vector{<:MOI.Index}) = MOI.$f(b.instance, attr, indices)
         # Objective function
         MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, arg::Union{MOI.OptimizationSense, MOI.AbstractScalarFunction}) = MOI.$f(b.instance, attr, arg)
+    end
+end
+for f in (:canget, :canset)
+    @eval begin
+        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, index::Type{<:MOI.Index}) = MOI.$f(b.instance, attr, index)
+    end
+end
+for f in (:set!, :get, :get!)
+    @eval begin
+        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, index::MOI.Index) = MOI.$f(b.instance, attr, index)
+        MOI.$f(b::AbstractBridgeInstance, attr::MOI.AnyAttribute, indices::Vector{<:MOI.Index}) = MOI.$f(b.instance, attr, indices)
     end
 end
 
@@ -143,7 +152,20 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         end
     end
 
-    for f in (:canget, :canset, :set!, :get, :get!)
+    for f in (:canget, :canset)
+        attributescode = quote
+            $attributescode
+
+            function $MOI.$f(b::$instancename, attr::$MOIU.InstanceConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
+                $MOI.$f(b.bridged, attr, ci)
+            end
+            function $MOI.$f(b::$instancename, attr::$MOIU.SolverConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
+                $MOI.$f(b.instance, attr, $MOIU.bridge(b, ci))
+            end
+        end
+    end
+
+    for f in (:set!, :get, :get!)
         attributescode = quote
             $attributescode
 
