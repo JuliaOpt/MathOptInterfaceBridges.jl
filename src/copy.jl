@@ -99,11 +99,24 @@ Creates `nvars` variables and returns a vector of `nvars` variable indices.
 function allocatevariables! end
 
 """
-    allocateobjective!(instance::MOI.AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
+    allocate!(instance::AbstractInstance, attr::AbstractInstanceAttribute, value)
+    allocate!(instance::AbstractInstance, attr::AbstractVariableAttribute, v::VariableIndex, value)
+    allocate!(instance::AbstractInstance, attr::AbstractConstraintAttribute, c::ConstraintIndex, value)
 
-Informs `instance` that `loadobjective!` will be called with the same arguments after `loadvariables!` is called.
+Informs `instance` that `load!` will be called with the same arguments after `loadvariables!` is called.
 """
-function allocateobjective! end
+function allocate! end
+
+"""
+    canallocate(instance::AbstractInstance, attr::AbstractInstanceAttribute)::Bool
+    canallocate(instance::AbstractInstance, attr::AbstractVariableAttribute, R::Type{VariableIndex})::Bool
+    canallocate(instance::AbstractInstance, attr::AbstractConstraintAttribute, R::Type{ConstraintIndex{F,S})::Bool
+
+Return a `Bool` indicating whether it is possible to allocate attribute `attr` applied to the index type `R` in the instance `instance`.
+"""
+function canallocate end
+canallocate(::MOI.AbstractInstance, ::MOI.AnyAttribute) = false
+canallocate(::MOI.AbstractInstance, ::MOI.AnyAttribute, ::Type{<:MOI.Index}) = false
 
 """
     allocateconstraint!(instance::MOI.AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
@@ -113,6 +126,13 @@ Returns the index for the constraint to be used in `loadconstraint!` that will b
 function allocateconstraint! end
 
 """
+    canallocateconstraint(instance::AbstractInstance, func::AbstractFunction, set::AbstractSet)::Bool
+
+Return a `Bool` indicating whether it is possible to allocate the constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is defined by `func`, and ``\\mathcal{S}`` is defined by `set`.
+"""
+canallocateconstraint(instance::MOI.AbstractInstance, func::MOI.AbstractFunction, set::MOI.AbstractSet) = false
+
+"""
     loadvariables!(instance::MOI.AbstractInstance, nvars::Integer)
 
 Prepares the `instance` for `loadobjective!` and `loadconstraint!`.
@@ -120,11 +140,24 @@ Prepares the `instance` for `loadobjective!` and `loadconstraint!`.
 function loadvariables! end
 
 """
-    loadobjective!(instance::MOI.AbstractInstance, sense::MOI.OptimizationSense, f::MOI.AbstractFunction)
+    load!(instance::AbstractInstance, attr::AbstractInstanceAttribute, value)
+    load!(instance::AbstractInstance, attr::AbstractVariableAttribute, v::VariableIndex, value)
+    load!(instance::AbstractInstance, attr::AbstractConstraintAttribute, c::ConstraintIndex, value)
 
-Sets the objective function to `f` and the objective sense to `sense`.
+This has the same effect that `set!` with the same arguments except that `allocate!` should be called first before `loadvariables!`.
 """
-function loadobjective! end
+function load! end
+
+"""
+    canload(instance::AbstractInstance, attr::AbstractInstanceAttribute)::Bool
+    canload(instance::AbstractInstance, attr::AbstractVariableAttribute, R::Type{VariableIndex})::Bool
+    canload(instance::AbstractInstance, attr::AbstractConstraintAttribute, R::Type{ConstraintIndex{F,S})::Bool
+
+Return a `Bool` indicating whether it is possible to load attribute `attr` applied to the index type `R` in the instance `instance`.
+"""
+function canload end
+canload(::MOI.AbstractInstance, ::MOI.AnyAttribute) = false
+canload(::MOI.AbstractInstance, ::MOI.AnyAttribute, ::Type{<:MOI.Index}) = false
 
 """
     loadconstraint!(instance::MOI.AbstractInstance, ci::MOI.ConstraintIndex, f::MOI.AbstractFunction, s::MOI.AbstractSet)
@@ -133,24 +166,71 @@ Sets the constraint function and set for the constraint of index `ci`.
 """
 function loadconstraint! end
 
+"""
+    canloadconstraint(instance::AbstractInstance, func::AbstractFunction, set::AbstractSet)::Bool
+
+Return a `Bool` indicating whether it is possible to load the constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is defined by `func`, and ``\\mathcal{S}`` is defined by `set`.
+"""
+canloadconstraint(instance::MOI.AbstractInstance, func::MOI.AbstractFunction, set::MOI.AbstractSet) = false
+
 function allocateconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    for ci_src in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+    # Allocate constraints
+    cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+    for ci_src in cis_src
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
         f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        ci_dest = allocateconstraint!(dest, f_dest, s)
-        idxmap.conmap[ci_src] = ci_dest
+        if canallocateconstraint(dest, f_dest, s)
+            ci_dest = allocateconstraint!(dest, f_dest, s)
+            idxmap.conmap[ci_src] = ci_dest
+        else
+            return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
+        end
     end
+
+    # Allocate constraint attributes
+    cis_dest = map(ci -> idxmap[ci], cis_src)
+    for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+        if MOI.canget(src, attr, CI{F, S})
+            if !canallocate(dest, attr, CI{F, S})
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            vector_of_values = MOI.get(src, attr, cis_src)
+            allocate!(dest, attr, cis_dest, vector_of_values)
+        end
+    end
+
+    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
 
 function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    for ci_src in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+    # Load constraints
+    cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+    for ci_src in cis_src
         ci_dest = idxmap[ci_src]
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
         f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        loadconstraint!(dest, ci_dest, f_dest, s)
+        if canloadconstraint(dest, f_dest, s)
+            loadconstraint!(dest, ci_dest, f_dest, s)
+        else
+            return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
+        end
     end
+
+    # Load constraint attributes
+    cis_dest = map(ci -> idxmap[ci], cis_src)
+    for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+        if MOI.canget(src, attr, CI{F, S})
+            if !canload(dest, attr, CI{F, S})
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            vector_of_values = MOI.get(src, attr, cis_src)
+            load!(dest, attr, cis_dest, vector_of_values)
+        end
+    end
+
+    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
 
 function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
@@ -158,32 +238,74 @@ function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
 
     idxmap = IndexMap()
 
+    # Allocate variables
     nvars = MOI.get(src, MOI.NumberOfVariables())
-    vars_src = MOI.get(src, MOI.ListOfVariableIndices())
-    vars_dest = allocatevariables!(dest, nvars)
-    for (var_src, var_dest) in zip(vars_src, vars_dest)
+    vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+    vis_dest = allocatevariables!(dest, nvars)
+    for (var_src, var_dest) in zip(vis_src, vis_dest)
         idxmap.varmap[var_src] = var_dest
     end
 
-    obj_sense = MOI.get(src, MOI.ObjectiveSense())
-    obj_src = MOI.get(src, MOI.ObjectiveFunction())
-    obj_dest = mapvariables(idxmap, obj_src)
+    # Allocate variable attributes
+    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
+        if MOI.canget(src, attr, VI)
+            if !canallocate(dest, attr, VI)
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            vector_of_values = MOI.get(src, attr, vis_src)
+            allocate!(dest, attr, vis_dest, vector_of_values)
+        end
+    end
 
-    allocateobjective!(dest, obj_sense, obj_dest)
+    # Allocate instance attributes
+    for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
+        if MOI.canget(src, attr)
+            if !canallocate(dest, attr)
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            allocate!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))
+        end
+    end
 
+    # Allocate constraints
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
         allocateconstraints!(dest, src, idxmap, F, S)
     end
 
+    # Load variables
     loadvariables!(dest, nvars)
 
-    loadobjective!(dest, obj_sense, obj_dest)
-
-    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
-        # do the rest in copyconstraints! which is type stable
-        loadconstraints!(dest, src, idxmap, F, S)
+    # Load variable attributes
+    vis_dest = map(vi -> idxmap[vi], vis_src)
+    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
+        if MOI.canget(src, attr, VI)
+            if !canload(dest, attr, VI)
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            vector_of_values = MOI.get(src, attr, vis_src)
+            load!(dest, attr, vis_dest, vector_of_values)
+        end
     end
 
-    idxmap
+    # Load instance attributes
+    for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
+        if MOI.canget(src, attr)
+            if !canload(dest, attr)
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            load!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))
+        end
+    end
+
+    # Copy constraints
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+        # do the rest in copyconstraints! which is type stable
+        res = loadconstraints!(dest, src, idxmap, F, S)
+        if res.status != MOI.CopySuccess
+            return res
+        end
+    end
+
+    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
