@@ -91,6 +91,22 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
 
+# Allocate-Load Interface: 2-pass copy of a MathOptInterface instance
+# Some solver wrappers (e.g. SCS, ECOS, SDOI) do not supporting copying an optimization instance using `MOI.addconstraints!`, `MOI.addvariables` and `MOI.set!`
+# as they first need to figure out some information about a model before being able to pass the problem data to the solver.
+#
+# During the first pass (called allocate) : the instance collects the relevant information about the problem so that
+# on the second pass (called load), the constraints can be loaded directly to the solver (in case of SDOI) or written directly into the matrix of constraints (in case of SCS and ECOS).
+
+# To support `MOI.copy!` using this 2-pass mechanism, implement the allocate-load interface defined below and do:
+# MOI.copy!(dest::InstanceType, src::MOI.AbstractInstance) = MOIU.allocateload!(dest, src)
+# In the implementation of the allocate-load interface, it can be assumed that the different function will the called in the following order:
+# 1) `allocatevariables!`
+# 2) `allocate!` and `allocateconstraint!`
+# 3) `loadvariables!` and `allocateconstraint!`
+# 4) `load!` and `loadconstraint!`
+# The interface is not meant to be used to create new constraints with `allocateconstraint!` followed by `loadconstrained!` after a solve, it is only meant for being used in this order to implement `MOI.copy!`.
+
 """
     allocatevariables!(instance::MOI.AbstractInstance, nvars::Integer)
 
@@ -121,7 +137,7 @@ canallocate(::MOI.AbstractInstance, ::MOI.AnyAttribute, ::Type{<:MOI.Index}) = f
 """
     allocateconstraint!(instance::MOI.AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
 
-Returns the index for the constraint to be used in `loadconstraint!` that will be called after `loadvariables!`.
+Returns the index for the constraint to be used in `loadconstraint!` that will be called after `loadvariables!` is called.
 """
 function allocateconstraint! end
 
@@ -233,6 +249,11 @@ function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
 end
 
+"""
+    allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
+
+Implements `MOI.copy!(dest, src)` using the allocate-load interface.
+"""
 function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     MOI.empty!(dest)
 
