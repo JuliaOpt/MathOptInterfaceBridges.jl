@@ -100,12 +100,12 @@ end
 
 # To support `MOI.copy!` using this 2-pass mechanism, implement the allocate-load interface defined below and do:
 # MOI.copy!(dest::InstanceType, src::MOI.AbstractInstance) = MOIU.allocateload!(dest, src)
-# In the implementation of the allocate-load interface, it can be assumed that the different function will the called in the following order:
+# In the implementation of the allocate-load interface, it can be assumed that the different functions will the called in the following order:
 # 1) `allocatevariables!`
 # 2) `allocate!` and `allocateconstraint!`
 # 3) `loadvariables!` and `allocateconstraint!`
 # 4) `load!` and `loadconstraint!`
-# The interface is not meant to be used to create new constraints with `allocateconstraint!` followed by `loadconstrained!` after a solve, it is only meant for being used in this order to implement `MOI.copy!`.
+# The interface is not meant to be used to create new constraints with `allocateconstraint!` followed by `loadconstraint!` after a solve, it is only meant for being used in this order to implement `MOI.copy!`.
 
 """
     allocatevariables!(instance::MOI.AbstractInstance, nvars::Integer)
