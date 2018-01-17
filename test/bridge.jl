@@ -40,7 +40,7 @@ MOIU.@bridge GeoMean MOIU.GeoMeanBridge () () (GeometricMeanCone,) () () () (Vec
 MOIU.@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 
 @testset "Bridge tests" begin
-    const config = MOIT.TestConfig(1e-7, 1e-7, false, true, true, true)
+    const config = MOIT.TestConfig(solve=false)
 
     @testset "GeoMeanBridge" begin
         MOIT.geomeantest(() -> GeoMean{Float64}(SimpleInstance{Float64}()), config)

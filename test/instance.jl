@@ -40,7 +40,7 @@ end
 
 const solver = () -> Instance{Float64}()
 # Only config.query is true as MOI.optimize! is not implemented
-const config = MOIT.TestConfig(0., 0., false, true, false, false)
+const config = MOIT.TestConfig(solve=false)
 
 @testset "Continuous Linear tests" begin
     MOIT.contlineartest(solver, config)
