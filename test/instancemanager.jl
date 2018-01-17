@@ -16,19 +16,21 @@
     @test MOI.canset(m, MOI.ObjectiveFunction())
     MOI.set!(m, MOI.ObjectiveFunction(), saf)
     @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction())) ≈ saf
+    @test MOI.get(m, MOI.ObjectiveFunction()) ≈ saf
+    @test !MOI.canget(m, MOIU.AttributeFromSolver(MOI.ObjectiveSense()))
 
     @test_throws AssertionError MOI.optimize!(m)
 
     MOIU.attachsolver!(m)
     @test MOIU.state(m) == MOIU.AttachedSolver
-    # This test is incorrect because ObjectiveFunction is returned in terms of
-    # the solver's variable indices.
-    #@test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction())) ≈ saf
+    @test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction())) ≈ saf
 
     @test MOI.canset(m, MOI.ObjectiveSense())
     MOI.set!(m, MOI.ObjectiveSense(), MOI.MaxSense)
+    @test MOI.canget(m, MOI.ObjectiveSense())
     @test MOI.canget(m, MOIU.AttributeFromInstance(MOI.ObjectiveSense()))
     @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.ObjectiveSense()))
+    @test MOI.get(m, MOI.ObjectiveSense()) == MOI.MaxSense
     @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveSense())) == MOI.MaxSense
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveSense())) == MOI.MaxSense
 
@@ -46,6 +48,8 @@
 
     MOI.optimize!(m)
 
+    @test MOI.canget(m, MOI.VariablePrimal(), typeof(v))
+    @test MOI.get(m, MOI.VariablePrimal(), v) == 3.0
     @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 

@@ -27,6 +27,7 @@ mutable struct InstanceManager
     state::InstanceManagerState
     mode::InstanceManagerMode
     instancetosolvermap::IndexMap
+    solvertoinstancemap::IndexMap
     # InstanceManager externally uses the same variable and constraint indices
     # as the instance. instancetosolvermap maps from the instance indices to the
     # solver indices.
@@ -35,7 +36,7 @@ end
 # TODO: Fuzz this code with a solver that is known to use a different indexing
 # scheme from the instance.
 
-InstanceManager(instance::MOI.AbstractStandaloneInstance, mode::InstanceManagerMode) = InstanceManager(instance, nothing, NoSolver, mode, IndexMap())
+InstanceManager(instance::MOI.AbstractStandaloneInstance, mode::InstanceManagerMode) = InstanceManager(instance, nothing, NoSolver, mode, IndexMap(), IndexMap())
 
 ## Methods for managing the state of InstanceManager.
 
@@ -110,10 +111,12 @@ function attachsolver!(m::InstanceManager)
     end
     m.state = AttachedSolver
     # MOI does not define the type of index_map, so we have to copy it into a
-    # concrete container.
+    # concrete container. Also load the reverse map.
     m.instancetosolvermap = IndexMap()
+    m.solvertoinstancemap = IndexMap()
     for k in keys(copy_result.indexmap)
         m.instancetosolvermap[k] = copy_result.indexmap[k]
+        m.solvertoinstancemap[copy_result.indexmap[k]] = k
     end
     return copy_result
 end
@@ -136,6 +139,7 @@ function MOI.addvariable!(m::InstanceManager)
     if m.state == AttachedSolver
         vindex_solver = MOI.addvariable!(m.solver)
         m.instancetosolvermap[vindex] = vindex_solver
+        m.solvertoinstancemap[vindex_solver] = vindex
     end
     return vindex
 end
@@ -147,6 +151,7 @@ function MOI.addvariables!(m::InstanceManager, n)
         vindices_solver = MOI.addvariables!(m.solver, n)
         for (vindex, vindex_solver) in zip(vindices, vindices_solver)
             m.instancetosolvermap[vindex] = vindex_solver
+            m.solvertoinstancemap[vindex_solver] = vindex
         end
     end
     return vindices
@@ -172,6 +177,7 @@ function MOI.addconstraint!(m::InstanceManager, func::MOI.AbstractFunction, set:
     if m.state == AttachedSolver
         cindex_solver = MOI.addconstraint!(m.solver, func, set)
         m.instancetosolvermap[cindex] = cindex_solver
+        m.solvertoinstancemap[cindex_solver] = cindex
     end
     return cindex
 end
@@ -180,6 +186,13 @@ end
 # transformconstraint!, cantransformconstraint
 
 ## InstanceManager get and set attributes
+
+# Attributes are mapped through attribute_value_map (defined in copy.jl) before
+# they are sent to the solver and when they are returned from the solver.
+# This map currently only translates indices on MOI.AbstractFunction objects
+# between the solver indices and the (user-facing) instance indices. As a result,
+# all MOI.AbstractFunctions must implement mapvariables. Other attributes that
+# store indices need to be handled with care.
 
 function MOI.set!(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, value)
     # The canset checks should catch most issues, but if a set! call fails then
@@ -190,21 +203,21 @@ function MOI.set!(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, value
     @assert MOI.canset(m.instance, attr)
     if m.state == AttachedSolver
         @assert MOI.canset(m.solver, attr)
-        MOI.set!(m.solver, attr, value)
+        MOI.set!(m.solver, attr, attribute_value_map(m.instancetosolvermap,value))
     end
     MOI.set!(m.instance, attr, value)
 end
 
-function MOI.set!(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, ref, value)
-    if m.mode == Automatic && !MOI.canset(m.solver, attr, typeof(ref))
+function MOI.set!(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, index, value)
+    if m.mode == Automatic && !MOI.canset(m.solver, attr, typeof(index))
         resetsolver!(m)
     end
-    @assert MOI.canset(m.instance, attr, ref)
+    @assert MOI.canset(m.instance, attr, typeof(index))
     if m.state == AttachedSolver
-        @assert MOI.canset(m.solver, attr, typeof(ref))
-        MOI.set!(m.solver, attr, ref, value)
+        @assert MOI.canset(m.solver, attr, typeof(index))
+        MOI.set!(m.solver, attr, index, attribute_value_map(m.instancetosolvermap,value))
     end
-    MOI.set!(m.instance, attr, ref, value)
+    MOI.set!(m.instance, attr, index, value)
 end
 
 # TODO: Automatic mode is broken in the case that the user tries to set
@@ -229,15 +242,46 @@ function MOI.canset(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribut
     return true
 end
 
+function MOI.get(m::InstanceManager, attr::MOI.AbstractInstanceAttribute)
+    if MOI.canget(m.instance, attr)
+        return MOI.get(m.instance, attr)
+    elseif m.state == AttachedSolver && MOI.canget(m.solver, attr)
+        return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr))
+    end
+    error("Attribute $attr not accessible")
+end
+
+function MOI.get(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, index)
+    if MOI.canget(m.instance, attr, typeof(index))
+        return MOI.get(m.instance, attr, index)
+    elseif m.state == AttachedSolver && MOI.canget(m.solver, attr, typeof(index))
+        return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr, getindex.(m.instancetosolvermap,index)))
+    end
+    error("Attribute $attr not accessible")
+end
+
+function MOI.canget(m::InstanceManager, attr::MOI.AbstractInstanceAttribute)
+    MOI.canget(m.instance, attr) && return true
+    if m.state == AttachedSolver
+        MOI.canget(m.solver, attr) && return true
+    end
+    return false
+end
+
+function MOI.canget(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, idxtype::Type{<:MOI.Index})
+    MOI.canget(m.instance, attr, idxtype) && return true
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.canget(m.solver, attr, idxtype) && return true
+    end
+    return false
+end
+
 # Force users to specify whether the attribute should be queried from the
 # instance or the solver. Maybe we could consider a small whitelist of
 # attributes to handle automatically.
 
-# TODO/Warning: AttributeFromSolver is somewhat broken and dangerous because it
-# deals with objects indexed in terms of solver variables (if applicable).
-# This leads to surprising behavior when used with ObjectiveFunction() and other similar
-# attributes. Maybe we should process AbstractFunctions that are set/get
-# with AttributeFromSolver to map the indices from the instance to the solver.
+# These are expert methods to get or set attributes directly in the instance
+# or solver.
 
 struct AttributeFromInstance{T <: MOI.AnyAttribute}
     attr::T
@@ -257,12 +301,12 @@ end
 
 function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <: MOI.AbstractInstanceAttribute}
     @assert m.state == AttachedSolver
-    return MOI.get(m.solver, attr.attr)
+    return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr.attr))
 end
 
 function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
-    return MOI.get(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx))
+    return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx)))
 end
 
 function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}) where {T <: MOI.AbstractInstanceAttribute}
@@ -274,17 +318,14 @@ function MOI.canget(m::InstanceManager, attr::AttributeFromInstance{T}, idxtype:
 end
 
 function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <: MOI.AbstractInstanceAttribute}
-    @assert m.state == AttachedSolver
+    m.state == AttachedSolver || return false
     return MOI.canget(m.solver, attr.attr)
 end
 
 function MOI.canget(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype::Type{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
-    @assert m.state == AttachedSolver
+    m.state == AttachedSolver || return false
     return MOI.canget(m.solver, attr.attr, idxtype)
 end
-
-# These are expert methods. Usually you wouldn't want to set an attribute only
-# in instance or the solver.
 
 function MOI.set!(m::InstanceManager, attr::AttributeFromInstance{T}, v) where {T <: MOI.AbstractInstanceAttribute}
     return MOI.set!(m.instance, attr.attr, v)
@@ -296,12 +337,12 @@ end
 
 function MOI.set!(m::InstanceManager, attr::AttributeFromSolver{T}, v) where {T <: MOI.AbstractInstanceAttribute}
     @assert m.state == AttachedSolver
-    return MOI.set!(m.solver, attr.attr, v)
+    return MOI.set!(m.solver, attr.attr, attribute_value_map(m.instancetosolvermap,v))
 end
 
 function MOI.set!(m::InstanceManager, attr::AttributeFromSolver{T}, idx, v) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
-    return MOI.set!(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx), v)
+    return MOI.set!(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx), attribute_value_map(m.instancetosolvermap,v))
 end
 
 function MOI.canset(m::InstanceManager, attr::AttributeFromInstance{T}) where {T <: MOI.AbstractInstanceAttribute}
