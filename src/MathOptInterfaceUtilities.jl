@@ -23,6 +23,7 @@ include("copy.jl")
 include("instance.jl")
 include("parser.jl")
 include("mocksolverinstance.jl")
+include("instancemanager.jl")
 
 include("bridge.jl")
 include("intervalbridge.jl")
