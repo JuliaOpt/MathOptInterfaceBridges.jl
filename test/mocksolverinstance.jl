@@ -51,6 +51,8 @@ end
     instance = MOIU.MockSolverInstance(InstanceForMock{Float64}())
 
     v = MOI.addvariables!(instance, 2)
+    c1 = MOI.addconstraint!(instance, MOI.SingleVariable(v[1]), MOI.GreaterThan(1.0))
+
 
     # Load fake solution
     # TODO: Provide a more compact API for this.
@@ -58,24 +60,31 @@ end
     MOI.set!(instance, MOI.ObjectiveValue(), 1.0)
     MOI.set!(instance, MOI.ResultCount(), 1)
     MOI.set!(instance, MOI.PrimalStatus(), MOI.FeasiblePoint)
+    MOI.set!(instance, MOI.DualStatus(), MOI.FeasiblePoint)
     MOI.set!(instance, MOI.VariablePrimal(), v, [1.0, 2.0])
     MOI.set!(instance, MOI.VariablePrimal(), v[1], 3.0)
+    MOI.set!(instance, MOI.ConstraintDual(), c1, 5.9)
 
     # Attributes are hidden until after optimize!()
     @test !MOI.canget(instance, MOI.TerminationStatus())
     @test !MOI.canget(instance, MOI.ResultCount())
-    @test !MOI.canget(instance, MOI.VariablePrimal())
+    @test !MOI.canget(instance, MOI.VariablePrimal(), typeof(v[1]))
+    @test !MOI.canget(instance, MOI.ConstraintDual(), typeof(c1))
 
     MOI.optimize!(instance)
     @test MOI.canget(instance, MOI.TerminationStatus())
     @test MOI.canget(instance, MOI.ResultCount())
     @test MOI.canget(instance, MOI.ObjectiveValue())
     @test MOI.canget(instance, MOI.PrimalStatus())
+    @test MOI.canget(instance, MOI.DualStatus())
     @test MOI.canget(instance, MOI.VariablePrimal(), typeof(v[1]))
+    @test MOI.canget(instance, MOI.ConstraintDual(), typeof(c1))
     @test MOI.get(instance, MOI.TerminationStatus()) == MOI.Success
     @test MOI.get(instance, MOI.ResultCount()) == 1
     @test MOI.get(instance, MOI.ObjectiveValue()) == 1.0
     @test MOI.get(instance, MOI.PrimalStatus()) == MOI.FeasiblePoint
+    @test MOI.get(instance, MOI.DualStatus()) == MOI.FeasiblePoint
     @test MOI.get(instance, MOI.VariablePrimal(), v) == [3.0, 2.0]
     @test MOI.get(instance, MOI.VariablePrimal(), v[1]) == 3.0
+    @test MOI.get(instance, MOI.ConstraintDual(), c1) == 5.9
 end
