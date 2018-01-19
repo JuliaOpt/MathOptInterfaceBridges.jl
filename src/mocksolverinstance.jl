@@ -24,7 +24,7 @@ mutable struct MockSolverInstance <: MOI.AbstractSolverInstance
     primalstatus::MOI.ResultStatusCode
     dualstatus::MOI.ResultStatusCode
     varprimal::Dict{MOI.VariableIndex,Float64}
-    condual::Dict{MOI.ConstraintIndex,Float64}
+    condual::Dict{MOI.ConstraintIndex,Any}
     # TODO: constraint primal
 end
 
@@ -40,7 +40,7 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
                        MOI.UnknownResultStatus,
                        MOI.UnknownResultStatus,
                        Dict{MOI.VariableIndex,Float64}(),
-                       Dict{MOI.ConstraintIndex,Float64}())
+                       Dict{MOI.ConstraintIndex,Any}())
 
 MOI.addvariable!(mock::MockSolverInstance) = MOI.addvariable!(mock.instance)
 MOI.addvariables!(mock::MockSolverInstance, n::Int) = MOI.addvariables!(mock.instance, n)
@@ -128,7 +128,9 @@ function MOI.empty!(mock::MockSolverInstance)
     mock.resultcount = 0
     mock.objectivevalue = NaN
     mock.primalstatus = MOI.UnknownResultStatus
+    mock.dualstatus = MOI.UnknownResultStatus
     mock.varprimal = Dict{MOI.VariableIndex,Float64}()
+    mock.condual = Dict{MOI.ConstraintIndex,Any}()
     return
 end
 
@@ -139,7 +141,8 @@ function MOI.isempty(mock::MockSolverInstance)
     return MOI.isempty(mock.instance) && mock.attribute == 0 &&
         mock.solved == false && mock.terminationstatus == MOI.Success &&
         mock.resultcount == 0 && isnan(mock.objectivevalue) &&
-        mock.primalstatus == MOI.UnknownResultStatus
+        mock.primalstatus == MOI.UnknownResultStatus &&
+        mock.dualstatus == MOI.UnknownResultStatus
 end
 
 

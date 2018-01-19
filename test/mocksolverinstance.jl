@@ -1,5 +1,5 @@
 
-@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) () ()
+@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) ()
 
 
 @testset "Mock solver instance attributes" begin
@@ -52,6 +52,7 @@ end
 
     v = MOI.addvariables!(instance, 2)
     c1 = MOI.addconstraint!(instance, MOI.SingleVariable(v[1]), MOI.GreaterThan(1.0))
+    soc = MOI.addconstraint!(instance, MOI.VectorOfVariables(v), MOI.SecondOrderCone(2))
 
 
     # Load fake solution
@@ -64,12 +65,14 @@ end
     MOI.set!(instance, MOI.VariablePrimal(), v, [1.0, 2.0])
     MOI.set!(instance, MOI.VariablePrimal(), v[1], 3.0)
     MOI.set!(instance, MOI.ConstraintDual(), c1, 5.9)
+    MOI.set!(instance, MOI.ConstraintDual(), soc, [1.0,2.0])
 
     # Attributes are hidden until after optimize!()
     @test !MOI.canget(instance, MOI.TerminationStatus())
     @test !MOI.canget(instance, MOI.ResultCount())
     @test !MOI.canget(instance, MOI.VariablePrimal(), typeof(v[1]))
     @test !MOI.canget(instance, MOI.ConstraintDual(), typeof(c1))
+    @test !MOI.canget(instance, MOI.ConstraintDual(), typeof(soc))
 
     MOI.optimize!(instance)
     @test MOI.canget(instance, MOI.TerminationStatus())
@@ -79,6 +82,7 @@ end
     @test MOI.canget(instance, MOI.DualStatus())
     @test MOI.canget(instance, MOI.VariablePrimal(), typeof(v[1]))
     @test MOI.canget(instance, MOI.ConstraintDual(), typeof(c1))
+    @test MOI.canget(instance, MOI.ConstraintDual(), typeof(soc))
     @test MOI.get(instance, MOI.TerminationStatus()) == MOI.Success
     @test MOI.get(instance, MOI.ResultCount()) == 1
     @test MOI.get(instance, MOI.ObjectiveValue()) == 1.0
@@ -87,4 +91,5 @@ end
     @test MOI.get(instance, MOI.VariablePrimal(), v) == [3.0, 2.0]
     @test MOI.get(instance, MOI.VariablePrimal(), v[1]) == 3.0
     @test MOI.get(instance, MOI.ConstraintDual(), c1) == 5.9
+    @test MOI.get(instance, MOI.ConstraintDual(), soc) == [1.0,2.0]
 end
