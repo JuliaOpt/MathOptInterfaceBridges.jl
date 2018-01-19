@@ -104,8 +104,9 @@ end
     @testset "SOC constraints" begin
         s = """
         variables: x, y, z
-        varsoc: [x,y,z] in SecondOrderCone(2)
-        affsoc: [2x,y+1,-1*z] in SecondOrderCone(2)
+        varsoc: [x,y,z] in SecondOrderCone(3)
+        affsoc: [2x,y+1,-1*z] in SecondOrderCone(3)
+        affsoc2: [1.0,2.0,3.0] in SecondOrderCone(3)
         """
         instance = GeneralInstance{Float64}()
         x = MOI.addvariable!(instance)
@@ -114,14 +115,16 @@ end
         MOI.set!(instance, MOI.VariableName(), x, "x")
         MOI.set!(instance, MOI.VariableName(), y, "y")
         MOI.set!(instance, MOI.VariableName(), z, "z")
-        varsoc = MOI.addconstraint!(instance, MOI.VectorOfVariables([x,y,z]), MOI.SecondOrderCone(2))
-        affsoc = MOI.addconstraint!(instance, MOI.VectorAffineFunction([1,2,3],[x,y,z],[2.0,1.0,-1.0],[0.0,1.0,0.0]), MOI.SecondOrderCone(2))
+        varsoc = MOI.addconstraint!(instance, MOI.VectorOfVariables([x,y,z]), MOI.SecondOrderCone(3))
+        affsoc = MOI.addconstraint!(instance, MOI.VectorAffineFunction([1,2,3],[x,y,z],[2.0,1.0,-1.0],[0.0,1.0,0.0]), MOI.SecondOrderCone(3))
+        affsoc2 = MOI.addconstraint!(instance, MOI.VectorAffineFunction(Int[],MOI.VariableIndex[],Float64[],[1.0,2.0,3.0]), MOI.SecondOrderCone(3))
         MOI.set!(instance, MOI.ConstraintName(), varsoc, "varsoc")
         MOI.set!(instance, MOI.ConstraintName(), affsoc, "affsoc")
+        MOI.set!(instance, MOI.ConstraintName(), affsoc2, "affsoc2")
 
         instance2 = GeneralInstance{Float64}()
         MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x", "y", "z"], ["varsoc", "affsoc"])
+        MOIU.test_instances_equal(instance, instance2, ["x", "y", "z"], ["varsoc", "affsoc", "affsoc2"])
     end
 
 end

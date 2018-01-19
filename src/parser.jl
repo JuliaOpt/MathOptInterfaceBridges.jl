@@ -109,8 +109,11 @@ function parsefunction(ex)
         # only accept Expr(:call, :+, ...), no recursive expressions
         # TODO: generalize. x - y + z would be useful
         if isexpr(ex, :call) && ex.args[1] == :*
-            # handle 2x as 2x + 0
-            ex = Expr(:call,:+,ex,0)
+            # handle 2x as (+)(2x)
+            ex = Expr(:call,:+,ex)
+        end
+        if ex isa Number
+            ex = Expr(:call,:+,ex)
         end
         @assert isexpr(ex, :call) && ex.args[1] == :+
         affine_variables = Symbol[]
@@ -243,4 +246,3 @@ function loadfromstring!(instance, s)
         end
     end
 end
-
