@@ -16,7 +16,9 @@ mutable struct MockSolverInstance <: MOI.AbstractSolverInstance
     instance::MOI.AbstractStandaloneInstance
     attribute::Int # MockInstanceAttribute
     varattribute::Dict{MOI.VariableIndex,Int} # MockVariableAttribute
+    varname::Dict{MOI.VariableIndex,String} # VariableName
     conattribute::Dict{MOI.ConstraintIndex,Int} # MockConstraintAttribute
+    conname::Dict{MOI.ConstraintIndex,String} # ConstraintName
     solved::Bool
     terminationstatus::MOI.TerminationStatusCode
     resultcount::Int
@@ -28,11 +30,22 @@ mutable struct MockSolverInstance <: MOI.AbstractSolverInstance
     # TODO: constraint primal
 end
 
+# All user-facing indices are xor'd with this mask to produce unusual indices.
+# This is good at catching bugs.
+const internal_xor_mask = Int64(12345678)
+xor_index(vi::VI) = VI(xor(vi.value, internal_xor_mask))
+xor_index(ci::CI{F,S}) where {F,S} = CI{F,S}(xor(ci.value, internal_xor_mask))
+# Helper for mapvariables
+struct InternalXOR end
+Base.getindex(::Type{InternalXOR}, i::MOI.Index) = xor_index(i)
+
 MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
     MockSolverInstance(instance,
                        0,
                        Dict{MOI.VariableIndex,Int}(),
+                       Dict{MOI.VariableIndex,String}(),
                        Dict{MOI.ConstraintIndex,Int}(),
+                       Dict{MOI.ConstraintIndex,String}(),
                        false,
                        MOI.Success,
                        0,
@@ -42,14 +55,15 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
                        Dict{MOI.VariableIndex,Float64}(),
                        Dict{MOI.ConstraintIndex,Any}())
 
-MOI.addvariable!(mock::MockSolverInstance) = MOI.addvariable!(mock.instance)
-MOI.addvariables!(mock::MockSolverInstance, n::Int) = MOI.addvariables!(mock.instance, n)
-MOI.addconstraint!(mock::MockSolverInstance, F, S) = MOI.addconstraint!(mock.instance, F, S)
+MOI.addvariable!(mock::MockSolverInstance) = xor_index(MOI.addvariable!(mock.instance))
+MOI.addvariables!(mock::MockSolverInstance, n::Int) = xor_index.(MOI.addvariables!(mock.instance, n))
+MOI.canaddconstraint(mock::MockSolverInstance, F::MOI.AbstractFunction, S::MOI.AbstractSet) = MOI.canaddconstraint(mock.instance, mapvariables(InternalXOR, F), S)
+MOI.addconstraint!(mock::MockSolverInstance, F::MOI.AbstractFunction, S::MOI.AbstractSet) = xor_index(MOI.addconstraint!(mock.instance, mapvariables(InternalXOR, F), S))
 MOI.optimize!(mock::MockSolverInstance) = (mock.solved = true)
 
 MOI.canset(mock::MockSolverInstance, ::Union{MOI.ResultCount,MOI.TerminationStatus,MOI.ObjectiveValue,MOI.PrimalStatus,MOI.DualStatus,MOI.ObjectiveSense,MOI.ObjectiveFunction,MockInstanceAttribute}) = true
-MOI.canset(mock::MockSolverInstance, ::Union{MOI.VariablePrimal,MockVariableAttribute}, ::Type{MOI.VariableIndex}) = true
-MOI.canset(mock::MockSolverInstance, ::Union{MOI.ConstraintDual,MockConstraintAttribute}, ::Type{<:MOI.ConstraintIndex}) = true
+MOI.canset(mock::MockSolverInstance, ::Union{MOI.VariablePrimal,MOI.VariableName,MockVariableAttribute}, ::Type{MOI.VariableIndex}) = true
+MOI.canset(mock::MockSolverInstance, ::Union{MOI.ConstraintDual,MOI.ConstraintName,MockConstraintAttribute}, ::Type{<:MOI.ConstraintIndex}) = true
 
 MOI.set!(mock::MockSolverInstance, ::MOI.ResultCount, value::Integer) = (mock.resultcount = value)
 MOI.set!(mock::MockSolverInstance, ::MOI.TerminationStatus, value::MOI.TerminationStatusCode) = (mock.terminationstatus = value)
@@ -59,28 +73,40 @@ MOI.set!(mock::MockSolverInstance, ::MOI.DualStatus, value::MOI.ResultStatusCode
 MOI.set!(mock::MockSolverInstance, ::MockInstanceAttribute, value::Integer) = (mock.attribute = value)
 MOI.set!(mock::MockSolverInstance, attr::Union{MOI.ObjectiveSense,MOI.ObjectiveFunction}, value) = MOI.set!(mock.instance, attr, value)
 
-MOI.set!(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::MOI.VariableIndex, value) = (mock.varprimal[idx] = value)
-MOI.set!(mock::MockSolverInstance, ::MockVariableAttribute, idx::MOI.VariableIndex, value) = (mock.varattribute[idx] = value)
-MOI.set!(mock::MockSolverInstance, ::MockConstraintAttribute, idx::MOI.ConstraintIndex, value) = (mock.conattribute[idx] = value)
-MOI.set!(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::MOI.ConstraintIndex, value) = (mock.condual[idx] = value)
+MOI.set!(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::MOI.VariableIndex, value) = (mock.varprimal[xor_index(idx)] = value)
+MOI.set!(mock::MockSolverInstance, ::MOI.VariableName, idx::MOI.VariableIndex, value) = (mock.varname[xor_index(idx)] = value)
+MOI.set!(mock::MockSolverInstance, ::MockVariableAttribute, idx::MOI.VariableIndex, value) = (mock.varattribute[xor_index(idx)] = value)
+MOI.set!(mock::MockSolverInstance, ::MockConstraintAttribute, idx::MOI.ConstraintIndex, value) = (mock.conattribute[xor_index(idx)] = value)
+MOI.set!(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::MOI.ConstraintIndex, value) = (mock.condual[xor_index(idx)] = value)
+MOI.set!(mock::MockSolverInstance, ::MOI.ConstraintName, idx::MOI.ConstraintIndex, value) = (mock.conname[xor_index(idx)] = value)
 function MOI.set!(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::Vector{MOI.VariableIndex}, value)
     for (i,v) in zip(idx, value)
-        mock.varprimal[i] = v
+        mock.varprimal[xor_index(i)] = v
+    end
+end
+function MOI.set!(mock::MockSolverInstance, ::MOI.VariableName, idx::Vector{MOI.VariableIndex}, value)
+    for (i,v) in zip(idx, value)
+        mock.varname[xor_index(i)] = v
     end
 end
 function MOI.set!(mock::MockSolverInstance, ::MockVariableAttribute, idx::Vector{MOI.VariableIndex}, value)
     for (i,v) in zip(idx, value)
-        mock.varattribute[i] = v
+        mock.varattribute[xor_index(i)] = v
     end
 end
 function MOI.set!(mock::MockSolverInstance, ::MockConstraintAttribute, idx::Vector{<:MOI.ConstraintIndex}, value)
     for (i,v) in zip(idx, value)
-        mock.conattribute[i] = v
+        mock.conattribute[xor_index(i)] = v
     end
 end
 function MOI.set!(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::Vector{<:MOI.ConstraintIndex}, value)
     for (i,v) in zip(idx, value)
-        mock.condual[i] = v
+        mock.condual[xor_index(i)] = v
+    end
+end
+function MOI.set!(mock::MockSolverInstance, ::MOI.ConstraintName, idx::Vector{<:MOI.ConstraintIndex}, value)
+    for (i,v) in zip(idx, value)
+        mock.conname[xor_index(i)] = v
     end
 end
 
@@ -97,8 +123,10 @@ MOI.canget(mock::MockSolverInstance, ::MOI.ObjectiveFunction) = true
 # We assume that a full result is loaded if resultcount > 0
 MOI.canget(mock::MockSolverInstance, ::MOI.VariablePrimal, ::Type{MOI.VariableIndex}) = mock.solved && (mock.resultcount > 0)
 MOI.canget(mock::MockSolverInstance, ::MOI.ConstraintDual, ::Type{<:MOI.ConstraintIndex}) = mock.solved && (mock.resultcount > 0) && mock.dualstatus != MOI.UnknownResultStatus
+MOI.canget(mock::MockSolverInstance, ::MOI.ConstraintName, idx::Type{MOI.ConstraintIndex}) = length(mock.conname) > 0
 
 MOI.canget(mock::MockSolverInstance, ::MockVariableAttribute, idx::Type{MOI.VariableIndex}) = length(mock.varattribute) > 0
+MOI.canget(mock::MockSolverInstance, ::MOI.VariableName, idx::Type{MOI.VariableIndex}) = length(mock.varname) > 0
 MOI.canget(mock::MockSolverInstance, ::MockConstraintAttribute, idx::Type{<:MOI.ConstraintIndex}) = length(mock.conattribute) > 0
 
 MOI.get(mock::MockSolverInstance, ::MOI.ResultCount) = mock.resultcount
@@ -109,20 +137,26 @@ MOI.get(mock::MockSolverInstance, ::MOI.DualStatus) = mock.dualstatus
 MOI.get(mock::MockSolverInstance, ::MockInstanceAttribute) = mock.attribute
 MOI.get(mock::MockSolverInstance, attr::Union{MOI.ObjectiveSense,MOI.ObjectiveFunction}) = MOI.get(mock.instance, attr)
 
-MOI.get(mock::MockSolverInstance, ::MockVariableAttribute, idx::MOI.VariableIndex) = mock.varattribute[idx]
-MOI.get(mock::MockSolverInstance, ::MockVariableAttribute, idx::Vector{MOI.VariableIndex}) = getindex.(mock.varattribute, idx)
-MOI.get(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::MOI.VariableIndex) = mock.varprimal[idx]
-MOI.get(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::Vector{MOI.VariableIndex}) = getindex.(mock.varprimal, idx)
-MOI.get(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::MOI.ConstraintIndex) = mock.condual[idx]
-MOI.get(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::Vector{<:MOI.ConstraintIndex}) = getindex.(mock.condual, idx)
-MOI.get(mock::MockSolverInstance, ::MockConstraintAttribute, idx::MOI.ConstraintIndex) = mock.conattribute[idx]
-MOI.get(mock::MockSolverInstance, ::MockConstraintAttribute, idx::Vector{<:MOI.ConstraintIndex}) = getindex.(mock.conattribute, idx)
+MOI.get(mock::MockSolverInstance, ::MockVariableAttribute, idx::MOI.VariableIndex) = mock.varattribute[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MockVariableAttribute, idx::Vector{MOI.VariableIndex}) = getindex.(mock.varattribute, xor_index.(idx))
+MOI.get(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::MOI.VariableIndex) = mock.varprimal[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MOI.VariablePrimal, idx::Vector{MOI.VariableIndex}) = getindex.(mock.varprimal, xor_index.(idx))
+MOI.get(mock::MockSolverInstance, ::MOI.VariableName, idx::MOI.VariableIndex) = mock.varname[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MOI.VariableName, idx::Vector{MOI.VariableIndex}) = getindex.(mock.varname, xor_index.(idx))
+MOI.get(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::MOI.ConstraintIndex) = mock.condual[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MOI.ConstraintDual, idx::Vector{<:MOI.ConstraintIndex}) = getindex.(mock.condual, xor_index.(idx))
+MOI.get(mock::MockSolverInstance, ::MOI.ConstraintName, idx::MOI.ConstraintIndex) = mock.conname[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MOI.ConstraintName, idx::Vector{<:MOI.ConstraintIndex}) = getindex.(mock.conname, xor_index.(idx))
+MOI.get(mock::MockSolverInstance, ::MockConstraintAttribute, idx::MOI.ConstraintIndex) = mock.conattribute[xor_index(idx)]
+MOI.get(mock::MockSolverInstance, ::MockConstraintAttribute, idx::Vector{<:MOI.ConstraintIndex}) = getindex.(mock.conattribute, xor_index.(idx))
 
 function MOI.empty!(mock::MockSolverInstance)
     MOI.empty!(mock.instance)
     mock.attribute = 0
     mock.varattribute = Dict{MOI.VariableIndex,Int}()
+    mock.varname = Dict{MOI.VariableIndex,Int}()
     mock.conattribute = Dict{MOI.ConstraintIndex,Int}()
+    mock.conname = Dict{MOI.ConstraintIndex,String}()
     mock.solved = false
     mock.terminationstatus = MOI.Success
     mock.resultcount = 0
@@ -144,6 +178,24 @@ function MOI.isempty(mock::MockSolverInstance)
         mock.primalstatus == MOI.UnknownResultStatus &&
         mock.dualstatus == MOI.UnknownResultStatus
 end
+
+function MOI.canmodifyconstraint(mock::MockSolverInstance, c::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.canmodifyconstraint(mock.instance, xor_index(c), mapvariables(InternalXOR, func))
+end
+
+function MOI.canmodifyconstraint(mock::MockSolverInstance, c::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.canmodifyconstraint(mock.instance, xor_index(c), set)
+end
+
+function MOI.modifyconstraint!(mock::MockSolverInstance, c::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.modifyconstraint!(mock.instance, xor_index(c),  mapvariables(InternalXOR, func))
+end
+
+function MOI.modifyconstraint!(mock::MockSolverInstance, c::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.modifyconstraint!(mock.instance, xor_index(c), set)
+end
+
+# TODO: transformconstraint and cantransformconstraint
 
 
 MOI.copy!(mock::MockSolverInstance, src::MOI.AbstractInstance) = defaultcopy!(mock, src)
