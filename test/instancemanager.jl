@@ -50,6 +50,7 @@
 
     @test MOI.canget(m, MOI.VariablePrimal(), typeof(v))
     @test MOI.get(m, MOI.VariablePrimal(), v) == 3.0
+    @test MOI.get(m, MOI.VariablePrimal(), [v]) == [3.0]
     @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
