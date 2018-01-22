@@ -75,7 +75,7 @@ end
         y = MOI.addvariable!(instance)
         MOI.set!(instance, MOI.VariableName(), x, "x")
         MOI.set!(instance, MOI.VariableName(), y, "y")
-        MOI.set!(instance, MOI.ObjectiveFunction(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
+        MOI.set!(instance, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
         MOI.set!(instance, MOI.ObjectiveSense(), MOI.MinSense)
 
         instance2 = GeneralInstance{Float64}()
@@ -93,7 +93,7 @@ end
         y = MOI.addvariable!(instance)
         MOI.set!(instance, MOI.VariableName(), x, "x")
         MOI.set!(instance, MOI.VariableName(), y, "y")
-        MOI.set!(instance, MOI.ObjectiveFunction(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
+        MOI.set!(instance, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
         MOI.set!(instance, MOI.ObjectiveSense(), MOI.MaxSense)
 
         instance2 = GeneralInstance{Float64}()

@@ -338,10 +338,22 @@ function test_instances_equal(instance1::MOI.AbstractInstance, instance2::MOI.Ab
         @test isapprox(f1, map_variables(f2, variablemap_2to1))
         @test s1 == s2
     end
-    obj1 = MOI.get(instance1, MOI.ObjectiveFunction())
-    obj2 = MOI.get(instance2, MOI.ObjectiveFunction())
-    @test isapprox(obj1, map_variables(obj2, variablemap_2to1))
-    @test MOI.get(instance1, MOI.ObjectiveSense()) == MOI.get(instance2, MOI.ObjectiveSense())
+
+    for src in (instance1, instance2)
+        for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
+            @test MOI.canget(instance1, attr)
+            value1 = MOI.get(instance1, attr)
+            @test MOI.canget(instance2, attr)
+            value2 = MOI.get(instance2, attr)
+            if value1 isa MOI.AbstractFunction
+                @test value2 isa MOI.AbstractFunction
+                @test isapprox(value1, attribute_value_map(variablemap_2to1, value2))
+            else
+                @test !(value2 isa MOI.AbstractFunction)
+                @test value1 == value2
+            end
+        end
+    end
 end
 
 
