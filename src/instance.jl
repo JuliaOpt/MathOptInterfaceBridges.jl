@@ -51,17 +51,17 @@ _getlocr(constrs::Vector{<:C}, ::MOI.ListOfConstraintIndices{F, S}) where {F, S}
 # Implementation of MOI for AbstractInstance
 abstract type AbstractInstance{T} <: MOI.AbstractStandaloneInstance end
 
-getconstrloc(m::AbstractInstance, ci::CI) = m.constrmap[ci.value]
+getconstrloc(instance::AbstractInstance, ci::CI) = instance.constrmap[ci.value]
 
 # Variables
-MOI.get(m::AbstractInstance, ::MOI.NumberOfVariables) = length(m.varindices)
-function MOI.addvariable!(m::AbstractInstance)
-    v = VI(m.nextvariableid += 1)
-    push!(m.varindices, v)
+MOI.get(instance::AbstractInstance, ::MOI.NumberOfVariables) = length(instance.varindices)
+function MOI.addvariable!(instance::AbstractInstance)
+    v = VI(instance.nextvariableid += 1)
+    push!(instance.varindices, v)
     v
 end
-function MOI.addvariables!(m::AbstractInstance, n::Integer)
-    [MOI.addvariable!(m) for i in 1:n]
+function MOI.addvariables!(instance::AbstractInstance, n::Integer)
+    [MOI.addvariable!(instance) for i in 1:n]
 end
 
 function _removevar(ci::CI, f, s, vi::VI)
@@ -93,163 +93,163 @@ function _removevar!(constrs::Vector{<:C{MOI.SingleVariable}}, vi::VI)
     end
     rm
 end
-function MOI.delete!(m::AbstractInstance, vi::VI)
-    m.objective = removevariable(m.objective, vi)
-    rm = broadcastvcat(constrs -> _removevar!(constrs, vi), m)
+function MOI.delete!(instance::AbstractInstance, vi::VI)
+    instance.objective = removevariable(instance.objective, vi)
+    rm = broadcastvcat(constrs -> _removevar!(constrs, vi), instance)
     for ci in rm
-        MOI.delete!(m, ci)
+        MOI.delete!(instance, ci)
     end
-    delete!(m.varindices, vi)
-    if haskey(m.varnames, vi)
-        delete!(m.namesvar, m.varnames[vi])
-        delete!(m.varnames, vi)
+    delete!(instance.varindices, vi)
+    if haskey(instance.varnames, vi)
+        delete!(instance.namesvar, instance.varnames[vi])
+        delete!(instance.varnames, vi)
     end
 end
 
-function MOI.isvalid(m::AbstractInstance, ci::CI{F, S}) where {F, S}
-    if ci.value > length(m.constrmap)
+function MOI.isvalid(instance::AbstractInstance, ci::CI{F, S}) where {F, S}
+    if ci.value > length(instance.constrmap)
         false
     else
-        loc = getconstrloc(m, ci)
+        loc = getconstrloc(instance, ci)
         if iszero(loc) # This means that it has been deleted
             false
-        elseif loc > MOI.get(m, MOI.NumberOfConstraints{F, S}())
+        elseif loc > MOI.get(instance, MOI.NumberOfConstraints{F, S}())
             false
         else
-            ci == _getindex(m, ci, getconstrloc(m, ci))
+            ci == _getindex(instance, ci, getconstrloc(instance, ci))
         end
     end
 end
-MOI.isvalid(m::AbstractInstance, vi::VI) = in(vi, m.varindices)
+MOI.isvalid(instance::AbstractInstance, vi::VI) = in(vi, instance.varindices)
 
-MOI.get(m::AbstractInstance, ::MOI.ListOfVariableIndices) = collect(m.varindices)
-MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableIndices) = true
+MOI.get(instance::AbstractInstance, ::MOI.ListOfVariableIndices) = collect(instance.varindices)
+MOI.canget(instance::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 
 # Names
-MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::Type{VI}) = true
-function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
-    m.varnames[vi] = name
-    m.namesvar[name] = vi
+MOI.canset(instance::AbstractInstance, ::MOI.VariableName, vi::Type{VI}) = true
+function MOI.set!(instance::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
+    instance.varnames[vi] = name
+    instance.namesvar[name] = vi
 end
-MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}, name::Vector{String}) = MOI.set!.(m, MOI.VariableName(), vi, name)
-MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::Type{VI}) = true
-MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, EMPTYSTRING)
-MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}) = MOI.get.(m, MOI.VariableName(), vi)
+MOI.set!(instance::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}, name::Vector{String}) = MOI.set!.(instance, MOI.VariableName(), vi, name)
+MOI.canget(instance::AbstractInstance, ::MOI.VariableName, ::Type{VI}) = true
+MOI.get(instance::AbstractInstance, ::MOI.VariableName, vi::VI) = get(instance.varnames, vi, EMPTYSTRING)
+MOI.get(instance::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}) = MOI.get.(instance, MOI.VariableName(), vi)
 
-MOI.canget(m::AbstractInstance, ::Type{VI}, name::String) = haskey(m.namesvar, name)
-MOI.get(m::AbstractInstance, ::Type{VI}, name::String) = m.namesvar[name]
+MOI.canget(instance::AbstractInstance, ::Type{VI}, name::String) = haskey(instance.namesvar, name)
+MOI.get(instance::AbstractInstance, ::Type{VI}, name::String) = instance.namesvar[name]
 
 function MOI.get(instance::AbstractInstance, ::MOI.ListOfVariableAttributesSet)::Vector{MOI.AbstractVariableAttribute}
     isempty(instance.varnames) ? [] : [MOI.VariableName()]
 end
 
-MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
-function MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
-    m.connames[ci] = name
-    m.namescon[name] = ci
+MOI.canset(instance::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
+function MOI.set!(instance::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
+    instance.connames[ci] = name
+    instance.namescon[name] = ci
 end
-MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}, name::Vector{String}) = MOI.set!.(m, MOI.ConstraintName(), ci, name)
-MOI.canget(m::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
-MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(m.connames, ci, EMPTYSTRING)
-MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}) = MOI.get.(m, MOI.ConstraintName(), ci)
+MOI.set!(instance::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}, name::Vector{String}) = MOI.set!.(instance, MOI.ConstraintName(), ci, name)
+MOI.canget(instance::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
+MOI.get(instance::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(instance.connames, ci, EMPTYSTRING)
+MOI.get(instance::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}) = MOI.get.(instance, MOI.ConstraintName(), ci)
 
-MOI.canget(m::AbstractInstance, ::Type{<:CI}, name::String) = haskey(m.namescon, name)
-MOI.get(m::AbstractInstance, ::Type{<:CI}, name::String) = m.namescon[name]
+MOI.canget(instance::AbstractInstance, ::Type{<:CI}, name::String) = haskey(instance.namescon, name)
+MOI.get(instance::AbstractInstance, ::Type{<:CI}, name::String) = instance.namescon[name]
 
 function MOI.get(instance::AbstractInstance, ::MOI.ListOfConstraintAttributesSet)::Vector{MOI.AbstractConstraintAttribute}
     isempty(instance.connames) ? [] : [MOI.ConstraintName()]
 end
 
 # Objective
-MOI.get(m::AbstractInstance, ::MOI.ObjectiveSense) = m.sense
-MOI.canset(m::AbstractInstance, ::MOI.ObjectiveSense) = true
-function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
-    m.sense = sense
+MOI.get(instance::AbstractInstance, ::MOI.ObjectiveSense) = instance.sense
+MOI.canset(instance::AbstractInstance, ::MOI.ObjectiveSense) = true
+function MOI.set!(instance::AbstractInstance, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
+    instance.sense = sense
 end
-MOI.get(m::AbstractInstance, ::MOI.ObjectiveFunction) = m.objective
-MOI.canset(m::AbstractInstance, ::MOI.ObjectiveFunction) = true
-function MOI.set!(m::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
+MOI.get(instance::AbstractInstance, ::MOI.ObjectiveFunction) = instance.objective
+MOI.canset(instance::AbstractInstance, ::MOI.ObjectiveFunction) = true
+function MOI.set!(instance::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
     # f needs to be copied, see #2
-    m.objective = deepcopy(f)
+    instance.objective = deepcopy(f)
 end
 
-MOI.canmodifyobjective(m::AbstractInstance, change::MOI.AbstractFunctionModification) = true
-function MOI.modifyobjective!(m::AbstractInstance, change::MOI.AbstractFunctionModification)
-    m.objective = modifyfunction(m.objective, change)
+MOI.canmodifyobjective(instance::AbstractInstance, change::MOI.AbstractFunctionModification) = true
+function MOI.modifyobjective!(instance::AbstractInstance, change::MOI.AbstractFunctionModification)
+    instance.objective = modifyfunction(instance.objective, change)
 end
 
-function MOI.get(m::AbstractInstance, ::MOI.ListOfInstanceAttributesSet)::Vector{MOI.AbstractInstanceAttribute}
+function MOI.get(instance::AbstractInstance, ::MOI.ListOfInstanceAttributesSet)::Vector{MOI.AbstractInstanceAttribute}
     [MOI.ObjectiveSense(), MOI.ObjectiveFunction()]
 end
 
 # Constraints
 MOI.canaddconstraint(instance::AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = false
-function MOI.addconstraint!(m::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+function MOI.addconstraint!(instance::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     # We give the index value `nextconstraintid + 1` to the new constraint.
     # As the same counter is used for all pairs of F-in-S constraints,
     # the index value is unique across all constraint types as mentionned in `@instance`'s doc.
-    ci = CI{F, S}(m.nextconstraintid += 1)
+    ci = CI{F, S}(instance.nextconstraintid += 1)
     # f needs to be copied, see #2
-    push!(m.constrmap, _addconstraint!(m, ci, deepcopy(f), deepcopy(s)))
+    push!(instance.constrmap, _addconstraint!(instance, ci, deepcopy(f), deepcopy(s)))
     ci
 end
 
-MOI.candelete(m::AbstractInstance, i::MOI.Index) = MOI.isvalid(m, i)
-function MOI.delete!(m::AbstractInstance, ci::CI)
-    for (ci_next, _, _) in _delete!(m, ci, getconstrloc(m, ci))
-        m.constrmap[ci_next.value] -= 1
+MOI.candelete(instance::AbstractInstance, i::MOI.Index) = MOI.isvalid(instance, i)
+function MOI.delete!(instance::AbstractInstance, ci::CI)
+    for (ci_next, _, _) in _delete!(instance, ci, getconstrloc(instance, ci))
+        instance.constrmap[ci_next.value] -= 1
     end
-    m.constrmap[ci.value] = 0
-    if haskey(m.connames, ci)
-        delete!(m.namescon, m.connames[ci])
-        delete!(m.connames, ci)
+    instance.constrmap[ci.value] = 0
+    if haskey(instance.connames, ci)
+        delete!(instance.namescon, instance.connames[ci])
+        delete!(instance.connames, ci)
     end
 end
 
-MOI.canmodifyconstraint(m::AbstractInstance, ci::CI, change) = true
-function MOI.modifyconstraint!(m::AbstractInstance, ci::CI, change)
-    _modifyconstraint!(m, ci, getconstrloc(m, ci), change)
+MOI.canmodifyconstraint(instance::AbstractInstance, ci::CI, change) = true
+function MOI.modifyconstraint!(instance::AbstractInstance, ci::CI, change)
+    _modifyconstraint!(instance, ci, getconstrloc(instance, ci), change)
 end
 
-MOI.get(m::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(m, noc)
+MOI.get(instance::AbstractInstance, noc::MOI.NumberOfConstraints) = _getnoc(instance, noc)
 
-function MOI.get(m::AbstractInstance, loc::MOI.ListOfConstraints)
-    broadcastvcat(_getloc, m)
+function MOI.get(instance::AbstractInstance, loc::MOI.ListOfConstraints)
+    broadcastvcat(_getloc, instance)
 end
 
-function MOI.get(m::AbstractInstance, loc::MOI.ListOfConstraintIndices)
-    broadcastvcat(constrs -> _getlocr(constrs, loc), m)
+function MOI.get(instance::AbstractInstance, loc::MOI.ListOfConstraintIndices)
+    broadcastvcat(constrs -> _getlocr(constrs, loc), instance)
 end
 
-MOI.canget(m::AbstractInstance, ::Union{MOI.NumberOfVariables,
+MOI.canget(instance::AbstractInstance, ::Union{MOI.NumberOfVariables,
                                         MOI.NumberOfConstraints,
                                         MOI.ListOfConstraints,
                                         MOI.ListOfConstraintIndices,
                                         MOI.ObjectiveFunction,
                                         MOI.ObjectiveSense}) = true
 
-MOI.canget(m::AbstractInstance, ::Union{MOI.ConstraintFunction,
+MOI.canget(instance::AbstractInstance, ::Union{MOI.ConstraintFunction,
                                         MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
 
-function MOI.get(m::AbstractInstance, ::MOI.ConstraintFunction, ci::CI)
-    _getfunction(m, ci, getconstrloc(m, ci))
+function MOI.get(instance::AbstractInstance, ::MOI.ConstraintFunction, ci::CI)
+    _getfunction(instance, ci, getconstrloc(instance, ci))
 end
 
-function MOI.get(m::AbstractInstance, ::MOI.ConstraintSet, ci::CI)
-    _getset(m, ci, getconstrloc(m, ci))
+function MOI.get(instance::AbstractInstance, ::MOI.ConstraintSet, ci::CI)
+    _getset(instance, ci, getconstrloc(instance, ci))
 end
 
-function MOI.isempty(m::AbstractInstance)
-    m.sense == MOI.FeasibilitySense &&
-    isempty(m.objective.variables) && isempty(m.objective.coefficients) && iszero(m.objective.constant) &&
-    iszero(m.nextvariableid) && iszero(m.nextconstraintid)
+function MOI.isempty(instance::AbstractInstance)
+    instance.sense == MOI.FeasibilitySense &&
+    isempty(instance.objective.variables) && isempty(instance.objective.coefficients) && iszero(instance.objective.constant) &&
+    iszero(instance.nextvariableid) && iszero(instance.nextconstraintid)
 end
 
 MOI.copy!(dest::AbstractInstance, src::MOI.AbstractInstance) = defaultcopy!(dest, src)
 
 # Can be used to access constraints of an instance
 """
-broadcastcall(f::Function, m::AbstractInstance)
+broadcastcall(f::Function, instance::AbstractInstance)
 
 Calls `f(contrs)` for every vector `constrs::Vector{ConstraintIndex{F, S}, F, S}` of the instance.
 
@@ -268,7 +268,7 @@ MOIU.broadcastcall(constrs -> _addcon(solver, constrs), instance)
 """
 function broadcastcall end
 """
-broadcastvcat(f::Function, m::AbstractInstance)
+broadcastvcat(f::Function, instance::AbstractInstance)
 
 Calls `f(contrs)` for every vector `constrs::Vector{ConstraintIndex{F, S}, F, S}` of the instance and concatenate the results with `vcat` (this is used internally for `ListOfConstraints`).
 
@@ -336,8 +336,8 @@ _getC(s::SymbolFun) = _typedfun(s)
 _getCV(s::SymbolSet) = :($(_getC(s))[])
 _getCV(s::SymbolFun) = :($(s.cname){T, $(_getC(s))}())
 
-_callfield(f, s::SymbolFS) = :($f(m.$(_field(s))))
-_broadcastfield(b, s::SymbolFS) = :($b(f, m.$(_field(s))))
+_callfield(f, s::SymbolFS) = :($f(instance.$(_field(s))))
+_broadcastfield(b, s::SymbolFS) = :($b(f, instance.$(_field(s))))
 
 """
 macro instance(instancename, scalarsets, typedscalarsets, vectorsets, typedvectorsets, scalarfunctions, typedscalarfunctions, vectorfunctions, typedvectorfunctions)
@@ -431,36 +431,36 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
     end
 
     code = quote
-        function MathOptInterfaceUtilities.broadcastcall(f::Function, m::$instancename)
+        function MathOptInterfaceUtilities.broadcastcall(f::Function, instance::$instancename)
             $(Expr(:block, _broadcastfield.(:(MathOptInterfaceUtilities.broadcastcall), funs)...))
         end
-        function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$instancename)
+        function MathOptInterfaceUtilities.broadcastvcat(f::Function, instance::$instancename)
             vcat($(_broadcastfield.(:(MathOptInterfaceUtilities.broadcastvcat), funs)...))
         end
-        function $MOI.empty!(m::$instancename{T}) where T
-            m.sense = $MOI.FeasibilitySense
-            m.objective = $SAF{T}($VI[], T[], zero(T))
-            m.nextvariableid = 0
-            m.varindices = Set{$VI}()
-            m.varnames = Dict{Int64, String}()
-            m.namesvar = Dict{String, $VI}()
-            m.nextconstraintid = 0
-            m.connames = Dict{Int64, String}()
-            m.namescon = Dict{String, $CI}()
-            m.constrmap = Int[]
+        function $MOI.empty!(instance::$instancename{T}) where T
+            instance.sense = $MOI.FeasibilitySense
+            instance.objective = $SAF{T}($VI[], T[], zero(T))
+            instance.nextvariableid = 0
+            instance.varindices = Set{$VI}()
+            instance.varnames = Dict{Int64, String}()
+            instance.namesvar = Dict{String, $VI}()
+            instance.nextconstraintid = 0
+            instance.connames = Dict{Int64, String}()
+            instance.namescon = Dict{String, $CI}()
+            instance.constrmap = Int[]
             $(Expr(:block, _callfield.(:($MOI.empty!), funs)...))
         end
     end
     for (cname, sets) in ((scname, scalarsets), (vcname, vectorsets))
         code = quote
             $code
-            function MathOptInterfaceUtilities.broadcastcall(f::Function, m::$cname)
+            function MathOptInterfaceUtilities.broadcastcall(f::Function, instance::$cname)
                 $(Expr(:block, _callfield.(:f, sets)...))
             end
-            function MathOptInterfaceUtilities.broadcastvcat(f::Function, m::$cname)
+            function MathOptInterfaceUtilities.broadcastvcat(f::Function, instance::$cname)
                 vcat($(_callfield.(:f, sets)...))
             end
-            function $MOI.empty!(m::$cname)
+            function $MOI.empty!(instance::$cname)
                 $(Expr(:block, _callfield.(:(Base.empty!), sets)...))
             end
         end
@@ -474,7 +474,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
                 field = _field(s)
                 code = quote
                     $code
-                    $funct{F}(m::$c, ci::$T{F, <:$set}, args...) = $funct(m.$field, ci, args...)
+                    $funct{F}(instance::$c, ci::$T{F, <:$set}, args...) = $funct(instance.$field, ci, args...)
                 end
             end
         end
@@ -484,7 +484,7 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
             field = _field(f)
             code = quote
                 $code
-                $funct(m::$instancename, ci::$T{<:$fun}, args...) = $funct(m.$field, ci, args...)
+                $funct(instance::$instancename, ci::$T{<:$fun}, args...) = $funct(instance.$field, ci, args...)
             end
         end
     end
