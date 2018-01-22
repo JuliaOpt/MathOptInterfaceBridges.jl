@@ -33,9 +33,6 @@ mutable struct InstanceManager
     # solver indices.
 end
 
-# TODO: Fuzz this code with a solver that is known to use a different indexing
-# scheme from the instance.
-
 InstanceManager(instance::MOI.AbstractStandaloneInstance, mode::InstanceManagerMode) = InstanceManager(instance, nothing, NoSolver, mode, IndexMap(), IndexMap())
 
 ## Methods for managing the state of InstanceManager.
@@ -160,6 +157,9 @@ end
 function MOI.canaddconstraint(m::InstanceManager, func::MOI.AbstractFunction, set::MOI.AbstractSet)
     MOI.canaddconstraint(m.instance, func, set) || return false
     if m.state == AttachedSolver && m.mode == Manual
+        # TODO: The indices of func should be mapped, but that's an expensive
+        # operation. Hope that the solver doesn't care.
+        # Maybe canaddconstraint should just be a function of the types.
         MOI.canaddconstraint(m.solver, func, set) || return false
     end
     return true
@@ -169,21 +169,84 @@ function MOI.addconstraint!(m::InstanceManager, func::MOI.AbstractFunction, set:
     # The canaddconstraint checks should catch most issues, but if an
     # addconstraint! call fails then the instance and the solver may no longer
     # be in sync.
-    if m.mode == Automatic && !MOI.canaddconstraint(m.solver, func, set)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canaddconstraint(m.solver, func, set)
         resetsolver!(m)
     end
     @assert MOI.canaddconstraint(m, func, set)
     cindex = MOI.addconstraint!(m.instance, func, set)
     if m.state == AttachedSolver
-        cindex_solver = MOI.addconstraint!(m.solver, func, set)
+        cindex_solver = MOI.addconstraint!(m.solver, mapvariables(m.instancetosolvermap,func), set)
         m.instancetosolvermap[cindex] = cindex_solver
         m.solvertoinstancemap[cindex_solver] = cindex
     end
     return cindex
 end
 
-# TODO: addconstraints!, canmodifyconstraint, modifyconstraint!,
-# transformconstraint!, cantransformconstraint
+function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.canmodifyconstraint(m.instance, cindex, func) || return false
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], func) || return false
+    end
+    return true
+end
+
+function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.canmodifyconstraint(m.instance, cindex, set) || return false
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], set) || return false
+    end
+    return true
+end
+
+function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, func)
+        resetsolver!(m)
+    end
+    @assert MOI.canmodifyconstraint(m, cindex, func)
+    MOI.modifyconstraint!(m.instance, cindex, func)
+    if m.state == AttachedSolver
+        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap,func))
+    end
+    return
+end
+
+function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, set)
+        resetsolver!(m)
+    end
+    @assert MOI.canmodifyconstraint(m, cindex, set)
+    MOI.modifyconstraint!(m.instance, cindex, set)
+    if m.state == AttachedSolver
+        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], set)
+    end
+    return
+end
+
+MOI.isvalid(m::InstanceManager, index::MOI.Index) = MOI.isvalid(m.instance, index)
+
+function MOI.candelete(m::InstanceManager, index::MOI.Index)
+    MOI.candelete(m.instance, index) || return false
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.candelete(m.solver, m.instancetosolvermap[index]) || return false
+    end
+    return true
+end
+
+function MOI.delete!(m::InstanceManager, index::MOI.Index)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.candelete(m.solver, index)
+        resetsolver!(m)
+    end
+    @assert MOI.candelete(m, index)
+    if m.state == AttachedSolver
+        MOI.delete!(m.solver, m.instancetosolvermap[cindex])
+        delete!(m.solvertoinstancemap, m.instancetosolvermap[cindex])
+        delete!(m.instancetosolvermap, cindex)
+    end
+    MOI.delete!(m.instance, index)
+end
+
+
+# TODO: addconstraints!, transformconstraint!, cantransformconstraint
 
 ## InstanceManager get and set attributes
 
@@ -197,7 +260,7 @@ end
 function MOI.set!(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, value)
     # The canset checks should catch most issues, but if a set! call fails then
     # the instance and the solver may no longer be in sync.
-    if m.mode == Automatic && !MOI.canset(m.solver, attr)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canset(m.solver, attr)
         resetsolver!(m)
     end
     @assert MOI.canset(m.instance, attr)
@@ -208,14 +271,14 @@ function MOI.set!(m::InstanceManager, attr::MOI.AbstractInstanceAttribute, value
     MOI.set!(m.instance, attr, value)
 end
 
-function MOI.set!(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, index, value)
-    if m.mode == Automatic && !MOI.canset(m.solver, attr, typeof(index))
+function MOI.set!(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, index::MOI.Index, value)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canset(m.solver, attr, typeof(index))
         resetsolver!(m)
     end
     @assert MOI.canset(m.instance, attr, typeof(index))
     if m.state == AttachedSolver
         @assert MOI.canset(m.solver, attr, typeof(index))
-        MOI.set!(m.solver, attr, index, attribute_value_map(m.instancetosolvermap,value))
+        MOI.set!(m.solver, attr, m.instancetosolvermap[index], attribute_value_map(m.instancetosolvermap,value))
     end
     MOI.set!(m.instance, attr, index, value)
 end
@@ -270,7 +333,7 @@ end
 
 function MOI.canget(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, idxtype::Type{<:MOI.Index})
     MOI.canget(m.instance, attr, idxtype) && return true
-    if m.state == AttachedSolver && m.mode == Manual
+    if m.state == AttachedSolver
         MOI.canget(m.solver, attr, idxtype) && return true
     end
     return false
@@ -304,7 +367,12 @@ function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}) where {T <: M
     return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr.attr))
 end
 
-function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}, idx) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}, idx::MOI.Index) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
+    @assert m.state == AttachedSolver
+    return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr.attr, m.instancetosolvermap[idx]))
+end
+
+function MOI.get(m::InstanceManager, attr::AttributeFromSolver{T}, idx::Vector{<:MOI.Index}) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
     return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx)))
 end
@@ -342,6 +410,7 @@ end
 
 function MOI.set!(m::InstanceManager, attr::AttributeFromSolver{T}, idx, v) where {T <: Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}}
     @assert m.state == AttachedSolver
+    # TODO: getindex. causes this to return a vector of results for scalar idx
     return MOI.set!(m.solver, attr.attr, getindex.(m.instancetosolvermap,idx), attribute_value_map(m.instancetosolvermap,v))
 end
 
@@ -364,5 +433,3 @@ function MOI.canset(m::InstanceManager, attr::AttributeFromSolver{T}, idxtype::T
 end
 
 # TODO: get and set methods to look up/set name strings
-
-# TODO: delete! and candelete

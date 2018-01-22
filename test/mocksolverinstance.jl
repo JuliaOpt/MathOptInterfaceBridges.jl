@@ -1,6 +1,7 @@
 
-@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) ()
+@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, SecondOrderCone) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) ()
 
+# TODO: Run MOIT's instance tests on MockSolverInstance
 
 @testset "Mock solver instance attributes" begin
     instance = MOIU.MockSolverInstance(InstanceForMock{Float64}())
@@ -17,6 +18,7 @@
     MOI.set!(instance, MOIU.MockVariableAttribute(), [v1], [-11])
     @test MOI.get(instance, MOIU.MockVariableAttribute(), [v1]) == [-11]
 
+    @test MOI.canaddconstraint(instance, MOI.SingleVariable(v1), MOI.GreaterThan(1.0))
     c1 = MOI.addconstraint!(instance, MOI.SingleVariable(v1), MOI.GreaterThan(1.0))
     @test MOI.canset(instance, MOIU.MockConstraintAttribute(), typeof(c1))
     MOI.set!(instance, MOIU.MockConstraintAttribute(), c1, 12)
