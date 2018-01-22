@@ -264,7 +264,7 @@ function MOI.get(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,M
     if MOI.canget(m.instance, attr, eltype(indices))
         return MOI.get(m.instance, attr, indices)
     elseif m.state == AttachedSolver && MOI.canget(m.solver, attr, eltype(indices))
-        return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr, getindex.(m.instancetosolvermap,indices)))
+        return attribute_value_map.(m.solvertoinstancemap,MOI.get(m.solver, attr, getindex.(m.instancetosolvermap,indices)))
     end
     error("Attribute $attr not accessible")
 end
