@@ -251,10 +251,13 @@ function MOI.get(m::InstanceManager, attr::MOI.AbstractInstanceAttribute)
     error("Attribute $attr not accessible")
 end
 
+_eltypeof(index::Vector{<:MOI.Index}) = eltype(index)
+_eltypeof(index::MOI.Index) = typeof(index)
+
 function MOI.get(m::InstanceManager, attr::Union{MOI.AbstractVariableAttribute,MOI.AbstractConstraintAttribute}, index)
-    if MOI.canget(m.instance, attr, typeof(index))
+    if MOI.canget(m.instance, attr, _eltypeof(index))
         return MOI.get(m.instance, attr, index)
-    elseif m.state == AttachedSolver && MOI.canget(m.solver, attr, typeof(index))
+    elseif m.state == AttachedSolver && MOI.canget(m.solver, attr, _eltypeof(index))
         return attribute_value_map(m.solvertoinstancemap,MOI.get(m.solver, attr, getindex.(m.instancetosolvermap,index)))
     end
     error("Attribute $attr not accessible")
