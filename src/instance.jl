@@ -126,13 +126,15 @@ MOI.get(m::AbstractInstance, ::MOI.ListOfVariableIndices) = collect(m.varindices
 MOI.canget(m::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 
 # Names
-MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::VI) = MOI.isvalid(m, vi)
+MOI.canset(m::AbstractInstance, ::MOI.VariableName, vi::Type{VI}) = true
 function MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
     m.varnames[vi] = name
     m.namesvar[name] = vi
 end
-MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::VI) = true
+MOI.set!(m::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}, name::Vector{String}) = MOI.set!.(m, MOI.VariableName(), vi, name)
+MOI.canget(m::AbstractInstance, ::MOI.VariableName, ::Type{VI}) = true
 MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::VI) = get(m.varnames, vi, EMPTYSTRING)
+MOI.get(m::AbstractInstance, ::MOI.VariableName, vi::Vector{VI}) = MOI.get.(m, MOI.VariableName(), vi)
 
 MOI.canget(m::AbstractInstance, ::Type{VI}, name::String) = haskey(m.namesvar, name)
 MOI.get(m::AbstractInstance, ::Type{VI}, name::String) = m.namesvar[name]
@@ -141,13 +143,15 @@ function MOI.get(instance::AbstractInstance, ::MOI.ListOfVariableAttributesSet):
     isempty(instance.varnames) ? [] : [MOI.VariableName()]
 end
 
-MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::CI) = true
+MOI.canset(m::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
 function MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
     m.connames[ci] = name
     m.namescon[name] = ci
 end
-MOI.canget(m::AbstractInstance, ::MOI.ConstraintName, ::CI) = true
+MOI.set!(m::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}, name::Vector{String}) = MOI.set!.(m, MOI.ConstraintName(), ci, name)
+MOI.canget(m::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
 MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::CI) = get(m.connames, ci, EMPTYSTRING)
+MOI.get(m::AbstractInstance, ::MOI.ConstraintName, ci::Vector{<:CI}) = MOI.get.(m, MOI.ConstraintName(), ci)
 
 MOI.canget(m::AbstractInstance, ::Type{<:CI}, name::String) = haskey(m.namescon, name)
 MOI.get(m::AbstractInstance, ::Type{<:CI}, name::String) = m.namescon[name]
