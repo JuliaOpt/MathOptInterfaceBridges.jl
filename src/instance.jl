@@ -179,7 +179,7 @@ function MOI.modifyobjective!(instance::AbstractInstance, change::MOI.AbstractFu
 end
 
 function MOI.get(instance::AbstractInstance, ::MOI.ListOfInstanceAttributesSet)::Vector{MOI.AbstractInstanceAttribute}
-    [MOI.ObjectiveSense(), MOI.ObjectiveFunction()]
+    [MOI.ObjectiveSense(), MOI.ObjectiveFunction{typeof(instance.objective)}()]
 end
 
 # Constraints

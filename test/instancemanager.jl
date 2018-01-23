@@ -13,17 +13,17 @@
     v = MOI.addvariable!(m)
     x = MOI.addvariables!(m, 2)
     saf = MOI.ScalarAffineFunction([v;x], [1.0,2.0,3.0], 0.0)
-    @test MOI.canset(m, MOI.ObjectiveFunction())
-    MOI.set!(m, MOI.ObjectiveFunction(), saf)
-    @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction())) ≈ saf
-    @test MOI.get(m, MOI.ObjectiveFunction()) ≈ saf
+    @test MOI.canset(m, MOI.ObjectiveFunction{typeof(saf)}())
+    MOI.set!(m, MOI.ObjectiveFunction{typeof(saf)}(), saf)
+    @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction{typeof(saf)}())) ≈ saf
+    @test MOI.get(m, MOI.ObjectiveFunction{typeof(saf)}()) ≈ saf
     @test !MOI.canget(m, MOIU.AttributeFromSolver(MOI.ObjectiveSense()))
 
     @test_throws AssertionError MOI.optimize!(m)
 
     MOIU.attachsolver!(m)
     @test MOIU.state(m) == MOIU.AttachedSolver
-    @test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction())) ≈ saf
+    @test MOI.get(m, MOIU.AttributeFromSolver(MOI.ObjectiveFunction{typeof(saf)}())) ≈ saf
 
     @test MOI.canset(m, MOI.ObjectiveSense())
     MOI.set!(m, MOI.ObjectiveSense(), MOI.MaxSense)
@@ -99,9 +99,9 @@ end
     @test MOIU.state(m) == MOIU.EmptySolver
 
     saf = MOI.ScalarAffineFunction([v], [1.0], 0.0)
-    @test MOI.canset(m, MOI.ObjectiveFunction())
-    MOI.set!(m, MOI.ObjectiveFunction(), saf)
-    @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction())) ≈ saf
+    @test MOI.canset(m, MOI.ObjectiveFunction{typeof(saf)}())
+    MOI.set!(m, MOI.ObjectiveFunction{typeof(saf)}(), saf)
+    @test MOI.get(m, MOIU.AttributeFromInstance(MOI.ObjectiveFunction{typeof(saf)}())) ≈ saf
 
     MOI.optimize!(m)
     @test MOIU.state(m) == MOIU.AttachedSolver

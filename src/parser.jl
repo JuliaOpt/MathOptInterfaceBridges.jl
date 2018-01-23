@@ -218,17 +218,17 @@ function loadfromstring!(instance, s)
                 MOI.set!(instance, MOI.VariableName(), vindex, String(ex))
             end
         elseif label == :maxobjective
-            f = parsefunction(ex)
-            MOI.set!(instance, MOI.ObjectiveFunction(), parsedtoMOI(instance, f))
+            f = parsedtoMOI(instance, parsefunction(ex))
+            MOI.set!(instance, MOI.ObjectiveFunction{typeof(f)}(), f)
             MOI.set!(instance, MOI.ObjectiveSense(), MOI.MaxSense)
         elseif label == :minobjective
-            f = parsefunction(ex)
-            MOI.set!(instance, MOI.ObjectiveFunction(), parsedtoMOI(instance, f))
+            f = parsedtoMOI(instance, parsefunction(ex))
+            MOI.set!(instance, MOI.ObjectiveFunction{typeof(f)}(), f)
             MOI.set!(instance, MOI.ObjectiveSense(), MOI.MinSense)
         else
             # constraint
             @assert isexpr(ex, :call)
-            f = parsefunction(ex.args[2])
+            f = parsedtoMOI(instance, parsefunction(ex.args[2]))
             if ex.args[1] == :in
                 # Could be safer here
                 set = eval(MOI, ex.args[3])
@@ -241,7 +241,7 @@ function loadfromstring!(instance, s)
             else
                 error("Unrecognized expression $ex")
             end
-            cindex = MOI.addconstraint!(instance, parsedtoMOI(instance, f), set)
+            cindex = MOI.addconstraint!(instance, f, set)
             MOI.set!(instance, MOI.ConstraintName(), cindex, String(label))
         end
     end
