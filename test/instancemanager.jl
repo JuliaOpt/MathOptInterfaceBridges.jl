@@ -1,5 +1,5 @@
 
-@MOIU.instance InstanceForManager (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone) () (SingleVariable,) (ScalarAffineFunction,ScalarQuadraticFunction) (VectorOfVariables,) (VectorAffineFunction,)
+@MOIU.instance InstanceForManager (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, GeometricMeanCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle, RootDetConeTriangle, LogDetConeTriangle) () (SingleVariable,) (ScalarAffineFunction,ScalarQuadraticFunction) (VectorOfVariables,) (VectorAffineFunction,)
 
 @testset "InstanceManager Manual mode" begin
     m = MOIU.InstanceManager(InstanceForManager{Float64}(), MOIU.Manual)
@@ -143,4 +143,15 @@ end
 
     # TODO: test modifyconstraint! with a change that forces the solver to be dropped
 
+end
+
+@testset "InstanceManager constructor with solver" begin
+    function solver()
+        s = MOIU.MockSolverInstance(InstanceForMock{Float64}())
+        m = MOIU.InstanceManager(InstanceForManager{Float64}(), s)
+        @test MOIU.mode(m) == MOIU.Automatic
+        m
+    end
+    config = MOIT.TestConfig(solve=false)
+    MOIT.contconictest(solver, config)
 end

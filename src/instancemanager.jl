@@ -21,7 +21,7 @@ An `InstanceManger` has two modes of operation (`InstanceManagerMode`):
 - `Manual`: The only methods that change the state of the `InstanceManager` are [`resetsolver!`](@ref), [`dropsolver!`](@ref), and [`attachsolver!`](@ref). Attempting to perform an operation in the incorrect state results in an error.
 - `Automatic`: The `InstanceManager` changes its state when necessary. For example, `optimize!` will automatically call `attachsolver!` (a solver must have been previously set). Attempting to add a constraint or perform a modification not supported by the solver results in a drop to `EmptySolver` mode.
 """
-mutable struct InstanceManager
+mutable struct InstanceManager <: MOI.AbstractInstance
     instance::MOI.AbstractStandaloneInstance
     solver::Union{Void,MOI.AbstractSolverInstance}
     state::InstanceManagerState
@@ -34,6 +34,13 @@ mutable struct InstanceManager
 end
 
 InstanceManager(instance::MOI.AbstractStandaloneInstance, mode::InstanceManagerMode) = InstanceManager(instance, nothing, NoSolver, mode, IndexMap(), IndexMap())
+
+"""
+    InstanceManager(instance::AbstractStandaloneInstance, solver::AbstractSolverInstance)
+
+Creates an `InstanceManager` in `Automatic` mode, with the solver `solver`. The instance manager returned behaves like an `AbstractSolverInstance` as long as no `InstanceManager`-specific functions (e.g. `dropsolver!`) are called on it.
+"""
+InstanceManager(instance::MOI.AbstractStandaloneInstance, solver::MOI.AbstractSolverInstance) = InstanceManager(instance, solver, EmptySolver, Automatic, IndexMap(), IndexMap())
 
 ## Methods for managing the state of InstanceManager.
 
