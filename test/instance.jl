@@ -10,9 +10,6 @@ MOIU.@instance(Instance,
                (VectorOfVariables,),
                (VectorAffineFunction, VectorQuadraticFunction))
 
-using MathOptInterfaceTests
-const MOIT = MathOptInterfaceTests
-
 @testset "Name test" begin
     MOIT.nametest(Instance{Float64}())
 end

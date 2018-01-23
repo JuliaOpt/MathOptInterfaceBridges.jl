@@ -1,10 +1,13 @@
-using MathOptInterfaceUtilities
-const MOIU = MathOptInterfaceUtilities
-
 using Base.Test
 
 using MathOptInterface
 const MOI = MathOptInterface
+
+using MathOptInterfaceTests
+const MOIT = MathOptInterfaceTests
+
+using MathOptInterfaceUtilities
+const MOIU = MathOptInterfaceUtilities
 
 include("functions.jl")
 include("sets.jl")
