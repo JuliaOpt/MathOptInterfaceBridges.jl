@@ -423,7 +423,7 @@ function _modifycoefficient(variables::Vector{MOI.VariableIndex}, coefficients::
     variables = copy(variables)
     coefficients = copy(coefficients)
     i = findfirst(variables, variable)
-    if i == 0
+    if iszero(i) || i === nothing # returns 0 in Julia v0.6 and nothing in Julia v0.7
         # The variable was not already in the function
         if !iszero(new_coefficient)
             push!(variables, variable)
