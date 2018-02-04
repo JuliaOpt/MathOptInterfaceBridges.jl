@@ -191,8 +191,9 @@ end
 
 function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     MOI.canmodifyconstraint(m.instance, cindex, func) || return false
+    solverfunc = mapvariables(m.instancetosolvermap, func)
     if m.state == AttachedSolver && m.mode == Manual
-        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], func) || return false
+        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], solverfunc) || return false
     end
     return true
 end
@@ -206,13 +207,14 @@ function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, set::S) wh
 end
 
 function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, func)
+    solverfunc = mapvariables(m.instancetosolvermap, func)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, solverfunc)
         resetsolver!(m)
     end
     @assert MOI.canmodifyconstraint(m, cindex, func)
     MOI.modifyconstraint!(m.instance, cindex, func)
     if m.state == AttachedSolver
-        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap,func))
+        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap, solverfunc))
     end
     return
 end
