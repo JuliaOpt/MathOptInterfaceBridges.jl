@@ -69,7 +69,7 @@ function MOI.get(b::AbstractBridgeInstance, loc::MOI.ListOfConstraintIndices)
     for bridge in values(b.bridges)
         for c in MOI.get(bridge, loc)
             i = findfirst(locr, c)
-            if i !== nothing && !iszero(i)
+            if (VERSION >= v"0.7.0-DEV.3395" && i !== nothing) || (VERSION < v"0.7.0-DEV.3395" && !iszero(i))
                 MOI.deleteat!(locr, i)
             end
         end
