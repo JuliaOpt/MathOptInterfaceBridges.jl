@@ -43,11 +43,11 @@ MOIU.@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (V
     const config = MOIT.TestConfig(solve=false)
 
     @testset "GeoMeanBridge" begin
-        MOIT.geomeantest(() -> GeoMean{Float64}(SimpleInstance{Float64}()), config)
+        MOIT.geomeantest(GeoMean{Float64}(SimpleInstance{Float64}()), config)
     end
 
     @testset "RootDetBridge" begin
-        MOIT.rootdet1tvtest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
-        MOIT.rootdet1tftest(() -> RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+        MOIT.rootdet1tvtest(RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
+        MOIT.rootdet1tftest(RootDet{Float64}(GeoMean{Float64}(SimpleInstance{Float64}())), config)
     end
 end
