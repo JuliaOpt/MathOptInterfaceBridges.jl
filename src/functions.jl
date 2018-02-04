@@ -398,7 +398,7 @@ function _modifycoefficient(variables::Vector{MOI.VariableIndex}, coefficients::
     variables = copy(variables)
     coefficients = copy(coefficients)
     i = findfirst(variables, variable)
-    if i === nothing || iszero(i) # returns 0 in Julia v0.6 and nothing in Julia v0.7
+    if (VERSION >= v"0.7.0-DEV.3395" && i === nothing) || (VERSION < v"0.7.0-DEV.3395" && iszero(i))
         # The variable was not already in the function
         if !iszero(new_coefficient)
             push!(variables, variable)
