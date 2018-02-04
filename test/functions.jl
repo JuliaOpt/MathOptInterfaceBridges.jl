@@ -108,15 +108,6 @@
         @test g.quadratic_coefficients == [6]
         @test g.constant == 5
     end
-    @testset "Variablewise constraint copy" begin
-        f = MOI.SingleVariable(x)
-        g = deepcopy(f)
-        @test g.variable == x
-        v = [x]
-        h = deepcopy(MOI.VectorOfVariables([x]))
-        push!(v, y)
-        @test h.variables == [x]
-    end
     @testset "Scalar" begin
         @testset "Affine" begin
             @test MOI.ScalarAffineFunction([x, z], [1, 1], 1) ≈ MOI.ScalarAffineFunction([x, y, z], [1, 1e-7, 1], 1.) atol=1e-6

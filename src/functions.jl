@@ -81,31 +81,6 @@ function Base.getindex(it::ScalarFunctionIterator{MOI.VectorAffineFunction{T}}, 
     MOI.VectorAffineFunction(outputindex, variables, coefficients, constant)
 end
 
-# Define copy of function
-Base.deepcopy(f::SVF) = f
-Base.deepcopy(f::VVF) = VVF(copy(f.variables))
-Base.deepcopy(f::SAF) = SAF(copy(f.variables),
-                            copy(f.coefficients),
-                            f.constant)
-Base.deepcopy(f::VAF) = VAF(copy(f.outputindex),
-                            copy(f.variables),
-                            copy(f.coefficients),
-                            f.constant)
-Base.deepcopy(f::SQF) = SQF(copy(f.affine_variables),
-                            copy(f.affine_coefficients),
-                            copy(f.quadratic_rowvariables),
-                            copy(f.quadratic_colvariables),
-                            copy(f.quadratic_coefficients),
-                            f.constant)
-Base.deepcopy(f::VQF) = VQF(copy(f.affine_outputindex),
-                            copy(f.affine_variables),
-                            copy(f.affine_coefficients),
-                            copy(f.quadratic_outputindex),
-                            copy(f.quadratic_rowvariables),
-                            copy(f.quadratic_colvariables),
-                            copy(f.quadratic_coefficients),
-                            f.constant)
-
 # Utilities for getting a canonical representation of a function
 Base.isless(v1::VI, v2::VI) = isless(v1.value, v2.value)
 """
