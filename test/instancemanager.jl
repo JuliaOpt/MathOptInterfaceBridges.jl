@@ -150,5 +150,5 @@ end
     m = MOIU.InstanceManager(InstanceForManager{Float64}(), s)
     @test MOIU.mode(m) == MOIU.Automatic
     config = MOIT.TestConfig(solve=false)
-    #MOIT.contconictest(m, config) # TODO empty! missing
+    MOIT.contconictest(m, config)
 end
