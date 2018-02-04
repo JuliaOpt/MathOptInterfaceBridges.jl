@@ -115,6 +115,15 @@ end
 # The interface is not meant to be used to create new constraints with `allocateconstraint!` followed by `loadconstraint!` after a solve, it is only meant for being used in this order to implement `MOI.copy!`.
 
 """
+    needsallocateload(instance::MOI.AbstractInstance)::Bool
+
+Return a `Bool` indicating whether `instance` does not support `addvariables!`/`addconstraint!`/`set!` but supports `allocatevariables!`/`allocateconstraint!`/`allocate!`/`loadvariables!`/`loadconstraint!`/`load!`.
+That is, the allocate-load interface need to be used to copy an instance to `instance`.
+"""
+function needsallocateload end
+needsallocateload(::MOI.AbstractInstance) = false
+
+"""
     allocatevariables!(instance::MOI.AbstractInstance, nvars::Integer)
 
 Creates `nvars` variables and returns a vector of `nvars` variable indices.
