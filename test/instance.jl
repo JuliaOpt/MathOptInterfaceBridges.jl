@@ -35,16 +35,15 @@ end
     MOIT.canaddconstrainttest(Instance{Int}(), Int, Float64)
 end
 
-const solver = () -> Instance{Float64}()
 # Only config.query is true as MOI.optimize! is not implemented
 const config = MOIT.TestConfig(solve=false)
 
 @testset "Continuous Linear tests" begin
-    MOIT.contlineartest(solver, config)
+    MOIT.contlineartest(Instance{Float64}(), config)
 end
 
 @testset "Continuous Conic tests" begin
-    MOIT.contconictest(solver, config)
+    MOIT.contconictest(Instance{Float64}(), config)
 end
 
 @testset "Quadratic functions" begin

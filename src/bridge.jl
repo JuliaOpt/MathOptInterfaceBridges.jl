@@ -44,6 +44,20 @@ abstract type AbstractBridgeInstance <: MOI.AbstractSolverInstance end
 bridge(b::AbstractBridgeInstance, ci::CI) = b.bridges[ci.value]
 MOI.optimize!(b::AbstractBridgeInstance) = MOI.optimize!(b.instance)
 
+MOI.isempty(b::AbstractBridgeInstance) = isempty(b.bridges) && MOI.isempty(b.instance)
+function MOI.empty!(b::AbstractBridgeInstance)
+    MOI.empty!(b.instance)
+    MOI.empty!(b.bridged)
+    empty!(b.bridges)
+end
+function MOI.copy!(b::AbstractBridgeInstance, src::MOI.AbstractInstance)
+    if needsallocateload(b.instance)
+        allocateload!(b, src)
+    else
+        defaultcopy!(b, src)
+    end
+end
+
 # References
 MOI.candelete(b::AbstractBridgeInstance, r::MOI.Index) = MOI.candelete(b.instance, r)
 MOI.isvalid(b::AbstractBridgeInstance, r::MOI.Index) = MOI.isvalid(b.instance, r)
