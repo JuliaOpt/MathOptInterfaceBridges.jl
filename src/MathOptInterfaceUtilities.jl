@@ -1,6 +1,8 @@
 __precompile__()
 module MathOptInterfaceUtilities
 
+using Compat # For lastindex
+
 using MathOptInterface
 const MOI = MathOptInterface
 

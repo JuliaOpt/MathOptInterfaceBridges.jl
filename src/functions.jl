@@ -47,7 +47,7 @@ Base.length(it::ScalarFunctionIterator{<:Union{MOI.VectorAffineFunction, MOI.Vec
 Base.eltype(it::ScalarFunctionIterator{MOI.VectorOfVariables}) = MOI.SingleVariable
 Base.eltype(it::ScalarFunctionIterator{MOI.VectorAffineFunction{T}}) where T = MOI.ScalarAffineFunction{T}
 Base.eltype(it::ScalarFunctionIterator{MOI.VectorQuadraticFunction{T}}) where T = MOI.ScalarQuadraticFunction{T}
-Base.endof(it::ScalarFunctionIterator) = length(it)
+Compat.lastindex(it::ScalarFunctionIterator) = length(it)
 
 # Define getindex for Vector functions
 
@@ -423,7 +423,7 @@ function _modifycoefficient(variables::Vector{MOI.VariableIndex}, coefficients::
     variables = copy(variables)
     coefficients = copy(coefficients)
     i = findfirst(variables, variable)
-    if iszero(i) || i === nothing # returns 0 in Julia v0.6 and nothing in Julia v0.7
+    if i === nothing || iszero(i) # returns 0 in Julia v0.6 and nothing in Julia v0.7
         # The variable was not already in the function
         if !iszero(new_coefficient)
             push!(variables, variable)
