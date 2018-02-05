@@ -28,7 +28,7 @@ function copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
         f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        if MOI.canaddconstraint(dest, f_dest, s)
+        if MOI.canaddconstraint(dest, typeof(f_dest), typeof(s))
             ci_dest = MOI.addconstraint!(dest, f_dest, s)
             idxmap.conmap[ci_src] = ci_dest
         else
