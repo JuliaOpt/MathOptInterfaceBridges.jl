@@ -111,7 +111,7 @@ for f in (:set!, :get, :get!)
 end
 
 # Constraints
-MOI.canaddconstraint(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = MOI.canaddconstraint(b.instance, f, s)
+MOI.canaddconstraint(b::AbstractBridgeInstance, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet} = MOI.canaddconstraint(b.instance, F, S)
 function MOI.addconstraint!(b::AbstractBridgeInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet)
     MOI.addconstraint!(b.instance, f, s)
 end
@@ -119,7 +119,7 @@ MOI.canmodifyconstraint(b::AbstractBridgeInstance, ci::CI, change) = MOI.canmodi
 MOI.modifyconstraint!(b::AbstractBridgeInstance, ci::CI, change) = MOI.modifyconstraint!(b.instance, ci, change)
 
 # Objective
-MOI.canmodifyobjective(b::AbstractBridgeInstance, change::MOI.AbstractFunctionModification) = MOI.canmodifyobjective(b.instance, change)
+MOI.canmodifyobjective(b::AbstractBridgeInstance, ::Type{M}) where M<:MOI.AbstractFunctionModification = MOI.canmodifyobjective(b.instance, M)
 MOI.modifyobjective!(b::AbstractBridgeInstance, change::MOI.AbstractFunctionModification) = MOI.modifyobjective!(b.instance, change)
 
 # Variables
@@ -218,7 +218,7 @@ macro bridge(instancename, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         $attributescode
 
         # Constraints
-        $MOI.canaddconstraint(b::$instancename, f::$bridgedfuns, s::$bridgedsets) = $MOI.canaddconstraint(b.bridged, f, s)
+        $MOI.canaddconstraint(b::$instancename, ::Type{F}, ::Type{S}) where {F<:$bridgedfuns, S<:$bridgedsets} = $MOI.canaddconstraint(b.bridged, F, S)
         function $MOI.addconstraint!(b::$instancename{T}, f::$bridgedfuns, s::$bridgedsets) where T
             ci = $MOI.addconstraint!(b.bridged, f, s)
             @assert !haskey(b.bridges, ci.value)

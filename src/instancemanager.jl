@@ -171,13 +171,13 @@ function MOI.addvariables!(m::InstanceManager, n)
     return vindices
 end
 
-function MOI.canaddconstraint(m::InstanceManager, func::MOI.AbstractFunction, set::MOI.AbstractSet)
-    MOI.canaddconstraint(m.instance, func, set) || return false
+function MOI.canaddconstraint(m::InstanceManager, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
+    MOI.canaddconstraint(m.instance, F, S) || return false
     if m.state == AttachedSolver && m.mode == Manual
         # TODO: The indices of func should be mapped, but that's an expensive
         # operation. Hope that the solver doesn't care.
         # Maybe canaddconstraint should just be a function of the types.
-        MOI.canaddconstraint(m.solver, func, set) || return false
+        MOI.canaddconstraint(m.solver, F, S) || return false
     end
     return true
 end
@@ -186,10 +186,10 @@ function MOI.addconstraint!(m::InstanceManager, func::MOI.AbstractFunction, set:
     # The canaddconstraint checks should catch most issues, but if an
     # addconstraint! call fails then the instance and the solver may no longer
     # be in sync.
-    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canaddconstraint(m.solver, func, set)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canaddconstraint(m.solver, typeof(func), typeof(set))
         resetsolver!(m)
     end
-    @assert MOI.canaddconstraint(m, func, set)
+    @assert MOI.canaddconstraint(m, typeof(func), typeof(set))
     cindex = MOI.addconstraint!(m.instance, func, set)
     if m.state == AttachedSolver
         cindex_solver = MOI.addconstraint!(m.solver, mapvariables(m.instancetosolvermap,func), set)
@@ -199,27 +199,19 @@ function MOI.addconstraint!(m::InstanceManager, func::MOI.AbstractFunction, set:
     return cindex
 end
 
-function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    MOI.canmodifyconstraint(m.instance, cindex, func) || return false
+function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI, change)
+    MOI.canmodifyconstraint(m.instance, cindex, change) || return false
     if m.state == AttachedSolver && m.mode == Manual
-        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], func) || return false
-    end
-    return true
-end
-
-function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    MOI.canmodifyconstraint(m.instance, cindex, set) || return false
-    if m.state == AttachedSolver && m.mode == Manual
-        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], set) || return false
+        MOI.canmodifyconstraint(m.solver, m.instancetosolvermap[cindex], change) || return false
     end
     return true
 end
 
 function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, func)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, typeof(func))
         resetsolver!(m)
     end
-    @assert MOI.canmodifyconstraint(m, cindex, func)
+    @assert MOI.canmodifyconstraint(m, cindex, typeof(func))
     MOI.modifyconstraint!(m.instance, cindex, func)
     if m.state == AttachedSolver
         MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap,func))
@@ -228,10 +220,10 @@ function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, func::F) whe
 end
 
 function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, set)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, S)
         resetsolver!(m)
     end
-    @assert MOI.canmodifyconstraint(m, cindex, set)
+    @assert MOI.canmodifyconstraint(m, cindex, S)
     MOI.modifyconstraint!(m.instance, cindex, set)
     if m.state == AttachedSolver
         MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], set)

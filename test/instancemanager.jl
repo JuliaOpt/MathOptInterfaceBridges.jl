@@ -55,14 +55,14 @@
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
     # InstanceForMock doesn't support Nonpositives
-    @test !MOI.canaddconstraint(m, MOI.VectorOfVariables([v]), MOI.Nonpositives(1))
+    @test !MOI.canaddconstraint(m, MOI.VectorOfVariables, MOI.Nonpositives)
 
-    @test MOI.canaddconstraint(m.instance, MOI.SingleVariable(v), MOI.LessThan(10.0))
-    @test MOI.canaddconstraint(m.solver.instance, MOI.SingleVariable(v), MOI.LessThan(10.0))
-    @test MOI.canaddconstraint(m.solver, MOI.SingleVariable(v), MOI.LessThan(10.0))
-    @test MOI.canaddconstraint(m, MOI.SingleVariable(v), MOI.LessThan(10.0))
+    @test MOI.canaddconstraint(m.instance, MOI.SingleVariable, MOI.LessThan{Float64})
+    @test MOI.canaddconstraint(m.solver.instance, MOI.SingleVariable, MOI.LessThan{Float64})
+    @test MOI.canaddconstraint(m.solver, MOI.SingleVariable, MOI.LessThan{Float64})
+    @test MOI.canaddconstraint(m, MOI.SingleVariable, MOI.LessThan{Float64})
     lb = MOI.addconstraint!(m, MOI.SingleVariable(v), MOI.LessThan(10.0))
-    @test MOI.canmodifyconstraint(m, lb, MOI.LessThan(11.0))
+    @test MOI.canmodifyconstraint(m, lb, MOI.LessThan{Float64})
     MOI.modifyconstraint!(m, lb, MOI.LessThan(11.0))
     @test MOI.get(m, MOI.ConstraintSet(), lb) == MOI.LessThan(11.0)
     @test MOI.get(m, MOI.ConstraintFunction(), lb) == MOI.SingleVariable(v)
@@ -70,7 +70,7 @@
     MOIU.dropsolver!(m)
     @test MOIU.state(m) == MOIU.NoSolver
 
-    @test MOI.canmodifyconstraint(m, lb, MOI.LessThan(12.0))
+    @test MOI.canmodifyconstraint(m, lb, MOI.LessThan{Float64})
     MOI.modifyconstraint!(m, lb, MOI.LessThan(12.0))
     @test MOI.get(m, MOI.ConstraintSet(), lb) == MOI.LessThan(12.0)
 

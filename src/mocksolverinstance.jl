@@ -57,7 +57,7 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
 
 MOI.addvariable!(mock::MockSolverInstance) = xor_index(MOI.addvariable!(mock.instance))
 MOI.addvariables!(mock::MockSolverInstance, n::Int) = xor_index.(MOI.addvariables!(mock.instance, n))
-MOI.canaddconstraint(mock::MockSolverInstance, F::MOI.AbstractFunction, S::MOI.AbstractSet) = MOI.canaddconstraint(mock.instance, mapvariables(InternalXOR, F), S)
+MOI.canaddconstraint(mock::MockSolverInstance, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet} = MOI.canaddconstraint(mock.instance, F, S)
 MOI.addconstraint!(mock::MockSolverInstance, F::MOI.AbstractFunction, S::MOI.AbstractSet) = xor_index(MOI.addconstraint!(mock.instance, mapvariables(InternalXOR, F), S))
 MOI.optimize!(mock::MockSolverInstance) = (mock.solved = true)
 
@@ -179,12 +179,8 @@ function MOI.isempty(mock::MockSolverInstance)
         mock.dualstatus == MOI.UnknownResultStatus
 end
 
-function MOI.canmodifyconstraint(mock::MockSolverInstance, c::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    MOI.canmodifyconstraint(mock.instance, xor_index(c), mapvariables(InternalXOR, func))
-end
-
-function MOI.canmodifyconstraint(mock::MockSolverInstance, c::CI{F,S}, set::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    MOI.canmodifyconstraint(mock.instance, xor_index(c), set)
+function MOI.canmodifyconstraint(mock::MockSolverInstance, c::CI, change)
+    MOI.canmodifyconstraint(mock.instance, xor_index(c), change)
 end
 
 function MOI.modifyconstraint!(mock::MockSolverInstance, c::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}

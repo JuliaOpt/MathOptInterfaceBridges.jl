@@ -179,7 +179,7 @@ function MOI.set!(instance::AbstractInstance, ::MOI.ObjectiveFunction, f::MOI.Ab
     instance.objective = deepcopy(f)
 end
 
-MOI.canmodifyobjective(instance::AbstractInstance, change::MOI.AbstractFunctionModification) = true
+MOI.canmodifyobjective(instance::AbstractInstance, ::Type{<:MOI.AbstractFunctionModification}) = true
 function MOI.modifyobjective!(instance::AbstractInstance, change::MOI.AbstractFunctionModification)
     instance.objective = modifyfunction(instance.objective, change)
 end
@@ -189,7 +189,6 @@ function MOI.get(instance::AbstractInstance, ::MOI.ListOfInstanceAttributesSet):
 end
 
 # Constraints
-MOI.canaddconstraint(instance::AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = false
 function MOI.addconstraint!(instance::AbstractInstance, f::F, s::S) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     # We give the index value `nextconstraintid + 1` to the new constraint.
     # As the same counter is used for all pairs of F-in-S constraints,
@@ -514,8 +513,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
                    $(_getCV.(funs)...))
         end
 
-        MOI.canaddconstraint(instance::$instancename{T}, f::Union{$(_typedfun.(scalarfuns)...)}, s::Union{$(_typedset.(scalarsets)...)}) where T = true
-        MOI.canaddconstraint(instance::$instancename{T}, f::Union{$(_typedfun.(vectorfuns)...)}, s::Union{$(_typedset.(vectorsets)...)}) where T = true
+        MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(scalarfuns)...)}}, ::Type{<:Union{$(_typedset.(scalarsets)...)}}) where T = true
+        MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(vectorfuns)...)}}, ::Type{<:Union{$(_typedset.(vectorsets)...)}}) where T = true
 
         $code
 

@@ -18,7 +18,7 @@
     MOI.set!(instance, MOIU.MockVariableAttribute(), [v1], [-11])
     @test MOI.get(instance, MOIU.MockVariableAttribute(), [v1]) == [-11]
 
-    @test MOI.canaddconstraint(instance, MOI.SingleVariable(v1), MOI.GreaterThan(1.0))
+    @test MOI.canaddconstraint(instance, MOI.SingleVariable, MOI.GreaterThan{Float64})
     c1 = MOI.addconstraint!(instance, MOI.SingleVariable(v1), MOI.GreaterThan(1.0))
     @test MOI.canset(instance, MOIU.MockConstraintAttribute(), typeof(c1))
     MOI.set!(instance, MOIU.MockConstraintAttribute(), c1, 12)
