@@ -207,14 +207,14 @@ function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI, change)
     return true
 end
 
-function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, func::F) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
-    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, typeof(func))
+function MOI.modifyconstraint!(m::InstanceManager, cindex::CI, change)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, typeof(change))
         resetsolver!(m)
     end
-    @assert MOI.canmodifyconstraint(m, cindex, typeof(func))
-    MOI.modifyconstraint!(m.instance, cindex, func)
+    @assert MOI.canmodifyconstraint(m, cindex, typeof(change))
+    MOI.modifyconstraint!(m.instance, cindex, change)
     if m.state == AttachedSolver
-        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap,func))
+        MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], mapvariables(m.instancetosolvermap,change))
     end
     return
 end
@@ -227,6 +227,26 @@ function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F,S}, set::S) wher
     MOI.modifyconstraint!(m.instance, cindex, set)
     if m.state == AttachedSolver
         MOI.modifyconstraint!(m.solver, m.instancetosolvermap[cindex], set)
+    end
+    return
+end
+
+function MOI.canmodifyobjective(m::InstanceManager, change)
+    MOI.canmodifyobjective(m.instance, change) || return false
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.canmodifyobjective(m.solver, change) || return false
+    end
+    return true
+end
+
+function MOI.modifyobjective!(m::InstanceManager, change::MOI.AbstractFunctionModification)
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyobjective(m.solver, typeof(change))
+        resetsolver!(m)
+    end
+    @assert MOI.canmodifyobjective(m, typeof(change))
+    MOI.modifyobjective!(m.instance, change)
+    if m.state == AttachedSolver
+        MOI.modifyobjective!(m.solver, mapvariables(m.instancetosolvermap,change))
     end
     return
 end
