@@ -125,6 +125,16 @@ function attachsolver!(m::InstanceManager)
     return copy_result
 end
 
+function MOI.empty!(m::InstanceManager)
+    MOI.empty!(m.instance)
+    if m.state == AttachedSolver
+        MOI.empty!(m.solver)
+    end
+    m.instancetosolvermap = IndexMap()
+    m.solvertoinstancemap = IndexMap()
+end
+MOI.isempty(m::InstanceManager) = MOI.isempty(m.instance)
+
 # Optimizing and adding/modifying constraints and variables.
 
 function MOI.optimize!(m::InstanceManager)
