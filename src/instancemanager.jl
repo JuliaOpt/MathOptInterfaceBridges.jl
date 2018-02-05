@@ -207,7 +207,7 @@ function MOI.canmodifyconstraint(m::InstanceManager, cindex::CI, change)
     return true
 end
 
-function MOI.modifyconstraint!(m::InstanceManager, cindex::CI{F}, change::Union{F, MOI.AbstractFunctionModification}) where F<:MOI.AbstractFunction
+function MOI.modifyconstraint!(m::InstanceManager, cindex::CI, change)
     if m.mode == Automatic && m.state == AttachedSolver && !MOI.canmodifyconstraint(m.solver, cindex, typeof(change))
         resetsolver!(m)
     end
