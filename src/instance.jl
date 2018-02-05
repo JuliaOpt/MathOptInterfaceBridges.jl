@@ -128,6 +128,9 @@ MOI.canget(instance::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 # Names
 MOI.canset(instance::AbstractInstance, ::MOI.VariableName, vi::Type{VI}) = true
 function MOI.set!(instance::AbstractInstance, ::MOI.VariableName, vi::VI, name::String)
+    if !isempty(name) && haskey(instance.namesvar, name) && instance.namesvar[name] != vi
+        error("Variable name $name is already used by $(instance.namesvar[name])")
+    end
     instance.varnames[vi] = name
     instance.namesvar[name] = vi
 end
@@ -145,6 +148,9 @@ end
 
 MOI.canset(instance::AbstractInstance, ::MOI.ConstraintName, ::Type{<:CI}) = true
 function MOI.set!(instance::AbstractInstance, ::MOI.ConstraintName, ci::CI, name::String)
+    if !isempty(name) && haskey(instance.namescon, name) && instance.namescon[name] != ci
+        error("Constraint name $name is already used by $(instance.namescon[name])")
+    end
     instance.connames[ci] = name
     instance.namescon[name] = ci
 end
