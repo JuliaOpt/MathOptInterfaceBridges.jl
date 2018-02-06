@@ -1,15 +1,19 @@
 using Base.Test
 
-mapvariables(varmap, f::MOI.SingleVariable) = MOI.SingleVariable(varmap[f.variable])
-mapvariables(varmap, f::MOI.VectorOfVariables) = MOI.VectorOfVariables(getindex.(varmap, f.variables))
-mapvariables(varmap, f::MOI.ScalarAffineFunction) = MOI.ScalarAffineFunction(getindex.(varmap, f.variables), f.coefficients, f.constant)
-mapvariables(varmap, f::MOI.VectorAffineFunction) = MOI.VectorAffineFunction(f.outputindex, getindex.(varmap, f.variables), f.coefficients, f.constant)
-mapvariables(varmap, f::MOI.ScalarQuadraticFunction) = MOI.ScalarQuadraticFunction(getindex.(varmap, f.affine_variables), f.affine_coefficients, getindex.(varmap, f.quadratic_rowvariables), getindex.(varmap, f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
-mapvariables(varmap, f::MOI.VectorQuadraticFunction) = MOI.VectorQuadraticFunction(f.affine_outputindex, getindex.(varmap, f.affine_variables), f.affine_coefficients, f.quadratic_outputindex, getindex.(varmap, f.quadratic_rowvariables), getindex.(varmap, f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
+mapvariables(varmap::Function, f::MOI.SingleVariable) = MOI.SingleVariable(varmap(f.variable))
+mapvariables(varmap::Function, f::MOI.VectorOfVariables) = MOI.VectorOfVariables(varmap.(f.variables))
+mapvariables(varmap::Function, f::MOI.ScalarAffineFunction) = MOI.ScalarAffineFunction(varmap.(f.variables), f.coefficients, f.constant)
+mapvariables(varmap::Function, f::MOI.VectorAffineFunction) = MOI.VectorAffineFunction(f.outputindex, varmap.(f.variables), f.coefficients, f.constant)
+mapvariables(varmap::Function, f::MOI.ScalarQuadraticFunction) = MOI.ScalarQuadraticFunction(varmap.(f.affine_variables), f.affine_coefficients, varmap.(f.quadratic_rowvariables), varmap.(f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
+mapvariables(varmap::Function, f::MOI.VectorQuadraticFunction) = MOI.VectorQuadraticFunction(f.affine_outputindex, varmap.(f.affine_variables), f.affine_coefficients, f.quadratic_outputindex, varmap.(f.quadratic_rowvariables), varmap.(f.quadratic_colvariables), f.quadratic_coefficients, f.constant)
 
-mapvariables(varmap, change::Union{MOI.ScalarConstantChange, MOI.VectorConstantChange}) = change
-mapvariables(varmap, change::MOI.ScalarCoefficientChange) = MOI.ScalarCoefficientChange(varmap[change.variable], change.new_coefficient)
-mapvariables(varmap, change::MOI.MultirowChange) = MOI.MultirowChange(varmap[change.variable], change.rows, change.new_coefficients)
+mapvariables(varmap, f::MOI.AbstractFunction) = mapvariables(vi -> varmap[vi], f)
+
+mapvariables(varmap::Function, change::Union{MOI.ScalarConstantChange, MOI.VectorConstantChange}) = change
+mapvariables(varmap::Function, change::MOI.ScalarCoefficientChange) = MOI.ScalarCoefficientChange(varmap(change.variable), change.new_coefficient)
+mapvariables(varmap::Function, change::MOI.MultirowChange) = MOI.MultirowChange(varmap(change.variable), change.rows, change.new_coefficients)
+
+mapvariables(varmap, f::MOI.AbstractFunctionModification) = mapvariables(vi -> varmap[vi], f)
 
 # Cat for MOI sets
 affineoutputindex(f::MOI.ScalarAffineFunction) = ones(Int, length(f.variables))

@@ -123,7 +123,6 @@ end
 MOI.isvalid(instance::AbstractInstance, vi::VI) = in(vi, instance.varindices)
 
 MOI.get(instance::AbstractInstance, ::MOI.ListOfVariableIndices) = collect(instance.varindices)
-MOI.canget(instance::AbstractInstance, ::MOI.ListOfVariableIndices) = true
 
 # Names
 MOI.canset(instance::AbstractInstance, ::MOI.VariableName, vi::Type{VI}) = true
@@ -227,14 +226,15 @@ function MOI.get(instance::AbstractInstance, loc::MOI.ListOfConstraintIndices)
 end
 
 MOI.canget(instance::AbstractInstance, ::Union{MOI.NumberOfVariables,
-                                        MOI.NumberOfConstraints,
-                                        MOI.ListOfConstraints,
-                                        MOI.ListOfConstraintIndices,
-                                        MOI.ObjectiveFunction,
-                                        MOI.ObjectiveSense}) = true
+                                               MOI.ListOfVariableIndices,
+                                               MOI.NumberOfConstraints,
+                                               MOI.ListOfConstraints,
+                                               MOI.ListOfConstraintIndices,
+                                               MOI.ObjectiveFunction,
+                                               MOI.ObjectiveSense}) = true
 
 MOI.canget(instance::AbstractInstance, ::Union{MOI.ConstraintFunction,
-                                        MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
+                                               MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
 
 function MOI.get(instance::AbstractInstance, ::MOI.ConstraintFunction, ci::CI)
     _getfunction(instance, ci, getconstrloc(instance, ci))
