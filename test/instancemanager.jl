@@ -150,7 +150,6 @@ end
     @test MOIU.mode(m) == mode
     config = MOIT.TestConfig(solve=false)
     MOIT.contlineartest(m, config)
-    MOIT.contconictest(m, config)
 end
 
 @testset "InstanceManager constructor with solver" begin
@@ -159,5 +158,4 @@ end
     @test MOIU.mode(m) == MOIU.Automatic
     config = MOIT.TestConfig(solve=false)
     MOIT.contlineartest(m, config)
-    MOIT.contconictest(m, config)
 end
