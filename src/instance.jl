@@ -382,7 +382,7 @@ mutable struct LPInstance{T} <: MOIU.AbstractInstance{T}
     nextvariableid::Int64
     varindices::Vector{MOI.VariableIndex}
     varnames::Dict{MOI.VariableIndex, String}
-    namesvar::Dict{String, Int64}
+    namesvar::Dict{String, MOI.VariableIndex}
     nextconstraintid::Int64
     connames::Dict{MOI.ConstraintIndex, String}
     namescon::Dict{String, MOI.ConstraintIndex}
