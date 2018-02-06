@@ -57,9 +57,9 @@ MOI.optimize!(mock::MockSolverInstance) = (mock.solved = true)
 
 MOI.canset(mock::MockSolverInstance, ::Union{MOI.ResultCount,MOI.TerminationStatus,MOI.ObjectiveValue,MOI.PrimalStatus,MOI.DualStatus,MOI.ObjectiveSense,MOI.ObjectiveFunction,MockInstanceAttribute}) = true
 MOI.canset(mock::MockSolverInstance, ::Union{MOI.VariablePrimal,MockVariableAttribute}, ::Type{MOI.VariableIndex}) = true
-MOI.canset(mock::MockSolverInstance, attr::MOI.AbstractVariableAttribute, idx::Type{MOI.VariableIndex}) = MOI.canset(mock.instance, attr, idx)
+MOI.canset(mock::MockSolverInstance, attr::MOI.AbstractVariableAttribute, IdxT::Type{MOI.VariableIndex}) = MOI.canset(mock.instance, attr, IdxT)
 MOI.canset(mock::MockSolverInstance, ::Union{MOI.ConstraintDual,MockConstraintAttribute}, ::Type{<:MOI.ConstraintIndex}) = true
-MOI.canset(mock::MockSolverInstance, attr::MOI.AbstractConstraintAttribute, idx::Type{<:MOI.ConstraintIndex}) = MOI.canset(mock.instance, attr, idx)
+MOI.canset(mock::MockSolverInstance, attr::MOI.AbstractConstraintAttribute, IdxT::Type{<:MOI.ConstraintIndex}) = MOI.canset(mock.instance, attr, IdxT)
 
 MOI.set!(mock::MockSolverInstance, ::MOI.ResultCount, value::Integer) = (mock.resultcount = value)
 MOI.set!(mock::MockSolverInstance, ::MOI.TerminationStatus, value::MOI.TerminationStatusCode) = (mock.terminationstatus = value)
@@ -107,8 +107,8 @@ MOI.canget(mock::MockSolverInstance, attr::Union{MOI.ConstraintFunction,
 MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintSet}, idx::MOI.Index) = MOI.get(mock.instance, attr, xor_index(idx))
 MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintFunction}, idx::MOI.Index) = xor_variables(MOI.get(mock.instance, attr, xor_index(idx)))
 
-MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractVariableAttribute, idx::Type{MOI.VariableIndex}) = MOI.canget(mock.instance, attr, idx)
-MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractConstraintAttribute, idx::Type{MOI.ConstraintIndex}) = MOI.canget(mock.instance, attr, idx)
+MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractVariableAttribute, IdxT::Type{MOI.VariableIndex}) = MOI.canget(mock.instance, attr, IdxT)
+MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractConstraintAttribute, IdxT::Type{<:MOI.ConstraintIndex}) = MOI.canget(mock.instance, attr, IdxT)
 
 # We assume that a full result is loaded if resultcount > 0
 MOI.canget(mock::MockSolverInstance, ::MOI.VariablePrimal, ::Type{MOI.VariableIndex}) = mock.solved && (mock.resultcount > 0)
