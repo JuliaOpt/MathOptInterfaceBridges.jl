@@ -267,9 +267,9 @@ function MOI.delete!(m::InstanceManager, index::MOI.Index)
     end
     @assert MOI.candelete(m, index)
     if m.state == AttachedSolver
-        MOI.delete!(m.solver, m.instancetosolvermap[cindex])
-        delete!(m.solvertoinstancemap, m.instancetosolvermap[cindex])
-        delete!(m.instancetosolvermap, cindex)
+        MOI.delete!(m.solver, m.instancetosolvermap[index])
+        delete!(m.solvertoinstancemap, m.instancetosolvermap[index])
+        delete!(m.instancetosolvermap, index)
     end
     MOI.delete!(m.instance, index)
 end
