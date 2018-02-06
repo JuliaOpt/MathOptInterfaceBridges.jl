@@ -54,8 +54,8 @@
     @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
-    # InstanceForMock doesn't support Nonpositives
-    @test !MOI.canaddconstraint(m, MOI.VectorOfVariables, MOI.Nonpositives)
+    # InstanceForMock doesn't support RotatedSecondOrderCone
+    @test !MOI.canaddconstraint(m, MOI.VectorOfVariables, MOI.RotatedSecondOrderCone)
 
     @test MOI.canaddconstraint(m.instance, MOI.SingleVariable, MOI.LessThan{Float64})
     @test MOI.canaddconstraint(m.solver.instance, MOI.SingleVariable, MOI.LessThan{Float64})
@@ -137,8 +137,8 @@ end
     @test MOI.canget(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), typeof(v))
     @test MOI.get(m, MOIU.AttributeFromSolver(MOI.VariablePrimal()), v) == 3.0
 
-    # InstanceForMock doesn't support SecondOrderCone
-    MOI.addconstraint!(m, MOI.VectorOfVariables([v]), MOI.Nonpositives(1))
+    # InstanceForMock doesn't support RotatedSecondOrderCone
+    MOI.addconstraint!(m, MOI.VectorOfVariables([v]), MOI.RotatedSecondOrderCone(1))
     @test MOIU.state(m) == MOIU.EmptySolver
 
     # TODO: test modifyconstraint! with a change that forces the solver to be dropped
