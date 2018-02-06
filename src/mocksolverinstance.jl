@@ -102,10 +102,10 @@ MOI.get(mock::MockSolverInstance, attr::Union{MOI.ListOfVariableIndices,
 MOI.get(mock::MockSolverInstance, attr::Union{MOI.ObjectiveFunction}) = xor_variables(MOI.get(mock.instance, attr))
 
 MOI.canget(mock::MockSolverInstance, attr::Union{MOI.ConstraintFunction,
-                                                 MOI.ConstraintSet}, idx::Type{<:MOI.Index}) = MOI.canget(mock.instance, attr, idx)
+                                                 MOI.ConstraintSet}, idx::Type{<:MOI.ConstraintIndex}) = MOI.canget(mock.instance, attr, idx)
 
-MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintSet}, idx::MOI.Index) = MOI.get(mock.instance, attr, xor_index(idx))
-MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintFunction}, idx::MOI.Index) = xor_variables(MOI.get(mock.instance, attr, xor_index(idx)))
+MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintSet}, idx::MOI.ConstraintIndex) = MOI.get(mock.instance, attr, xor_index(idx))
+MOI.get(mock::MockSolverInstance, attr::Union{MOI.ConstraintFunction}, idx::MOI.ConstraintIndex) = xor_variables(MOI.get(mock.instance, attr, xor_index(idx)))
 
 MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractVariableAttribute, IdxT::Type{MOI.VariableIndex}) = MOI.canget(mock.instance, attr, IdxT)
 MOI.canget(mock::MockSolverInstance, attr::MOI.AbstractConstraintAttribute, IdxT::Type{<:MOI.ConstraintIndex}) = MOI.canget(mock.instance, attr, IdxT)
