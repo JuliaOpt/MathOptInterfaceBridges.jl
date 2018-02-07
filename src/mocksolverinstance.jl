@@ -17,6 +17,7 @@ mutable struct MockSolverInstance <: MOI.AbstractSolverInstance
     attribute::Int # MockInstanceAttribute
     varattribute::Dict{MOI.VariableIndex,Int} # MockVariableAttribute
     conattribute::Dict{MOI.ConstraintIndex,Int} # MockConstraintAttribute
+    canaddvar::Bool
     solved::Bool
     terminationstatus::MOI.TerminationStatusCode
     resultcount::Int
@@ -40,6 +41,7 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
                        0,
                        Dict{MOI.VariableIndex,Int}(),
                        Dict{MOI.ConstraintIndex,Int}(),
+                       true,
                        false,
                        MOI.Success,
                        0,
@@ -49,6 +51,7 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
                        Dict{MOI.VariableIndex,Float64}(),
                        Dict{MOI.ConstraintIndex,Any}())
 
+MOI.canaddvariable(mock::MockSolverInstance) = MOI.canaddvariable(mock.instance) && mock.canaddvar
 MOI.addvariable!(mock::MockSolverInstance) = xor_index(MOI.addvariable!(mock.instance))
 MOI.addvariables!(mock::MockSolverInstance, n::Int) = xor_index.(MOI.addvariables!(mock.instance, n))
 MOI.canaddconstraint(mock::MockSolverInstance, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet} = MOI.canaddconstraint(mock.instance, F, S)

@@ -123,6 +123,7 @@ MOI.canmodifyobjective(b::AbstractBridgeInstance, ::Type{M}) where M<:MOI.Abstra
 MOI.modifyobjective!(b::AbstractBridgeInstance, change::MOI.AbstractFunctionModification) = MOI.modifyobjective!(b.instance, change)
 
 # Variables
+MOI.canaddvariable(b::AbstractBridgeInstance) = MOI.canaddvariable(b.instance)
 MOI.addvariable!(b::AbstractBridgeInstance) = MOI.addvariable!(b.instance)
 MOI.addvariables!(b::AbstractBridgeInstance, n) = MOI.addvariables!(b.instance, n)
 

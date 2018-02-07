@@ -63,6 +63,9 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
 
     # Copy variables
     vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+    if !MOI.canaddvariable(dest)
+        return MOI.CopyResult(MOI.CopyOtherError, "Adding variables is not supported", idxmap)
+    end
     for vi in vis_src
         idxmap.varmap[vi] = MOI.addvariable!(dest)
     end

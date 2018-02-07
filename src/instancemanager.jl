@@ -149,9 +149,19 @@ function MOI.optimize!(m::InstanceManager)
     MOI.optimize!(m.solver)
 end
 
+function MOI.canaddvariable(m::InstanceManager)
+    MOI.canaddvariable(m.instance) || return false
+    if m.state == AttachedSolver && m.mode == Manual
+        MOI.canaddvariable(m.solver) || return false
+    end
+    return true
+end
+
 function MOI.addvariable!(m::InstanceManager)
-    # TODO: This is currently broken for automatic mode if the solver doesn't
-    # support addvariable!. We probably need a "canaddvariable".
+    # Same note as for addconstraint!
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canaddvariable(m.solver)
+        resetsolver!(m)
+    end
     vindex = MOI.addvariable!(m.instance)
     if m.state == AttachedSolver
         vindex_solver = MOI.addvariable!(m.solver)
@@ -162,7 +172,10 @@ function MOI.addvariable!(m::InstanceManager)
 end
 
 function MOI.addvariables!(m::InstanceManager, n)
-    # TODO: Same note as above.
+    # Same note as for addconstraint!
+    if m.mode == Automatic && m.state == AttachedSolver && !MOI.canaddvariable(m.solver)
+        resetsolver!(m)
+    end
     vindices = MOI.addvariables!(m.instance, n)
     if m.state == AttachedSolver
         vindices_solver = MOI.addvariables!(m.solver, n)

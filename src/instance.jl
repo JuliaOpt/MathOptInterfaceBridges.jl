@@ -55,6 +55,7 @@ getconstrloc(instance::AbstractInstance, ci::CI) = instance.constrmap[ci.value]
 
 # Variables
 MOI.get(instance::AbstractInstance, ::MOI.NumberOfVariables) = length(instance.varindices)
+MOI.canaddvariable(instance::AbstractInstance) = true
 function MOI.addvariable!(instance::AbstractInstance)
     v = VI(instance.nextvariableid += 1)
     push!(instance.varindices, v)
