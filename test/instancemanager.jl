@@ -149,7 +149,7 @@ end
     s = MOIU.MockSolverInstance(InstanceForMock{Float64}())
     m = MOIU.InstanceManager(InstanceForManager{Float64}(), s)
     @test MOI.isempty(m)
-    @test MOIU.state(m) == MOIU.EmptySolver
+    @test MOIU.state(m) == MOIU.AttachedSolver
     @test MOIU.mode(m) == MOIU.Automatic
 end
 

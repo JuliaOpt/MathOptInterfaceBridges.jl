@@ -40,7 +40,7 @@ InstanceManager(instance::MOI.AbstractStandaloneInstance, mode::InstanceManagerM
 
 Creates an `InstanceManager` in `Automatic` mode, with the solver `solver`. The instance manager returned behaves like an `AbstractSolverInstance` as long as no `InstanceManager`-specific functions (e.g. `dropsolver!`) are called on it.
 """
-InstanceManager(instance::MOI.AbstractStandaloneInstance, solver::MOI.AbstractSolverInstance) = InstanceManager(instance, solver, EmptySolver, Automatic, IndexMap(), IndexMap())
+InstanceManager(instance::MOI.AbstractStandaloneInstance, solver::MOI.AbstractSolverInstance) = InstanceManager(instance, solver, AttachedSolver, Automatic, IndexMap(), IndexMap())
 
 ## Methods for managing the state of InstanceManager.
 
