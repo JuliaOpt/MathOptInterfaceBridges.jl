@@ -130,6 +130,9 @@ function MOI.empty!(m::InstanceManager)
     if m.state == AttachedSolver
         MOI.empty!(m.solver)
     end
+    if m.state == EmptySolver && m.mode == Automatic
+        m.state = AttachedSolver
+    end
     m.instancetosolvermap = IndexMap()
     m.solvertoinstancemap = IndexMap()
 end
