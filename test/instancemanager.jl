@@ -143,6 +143,8 @@ end
 
     # TODO: test modifyconstraint! with a change that forces the solver to be dropped
 
+    MOI.empty!(m)
+    @test MOIU.state(m) == MOIU.AttachedSolver
 end
 
 @testset "InstanceManager constructor with solver" begin
