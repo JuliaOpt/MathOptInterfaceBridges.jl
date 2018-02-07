@@ -145,17 +145,27 @@ end
 
 end
 
-@testset "InstanceManager constructor without solver in $mode mode" for mode in (MOIU.Manual, MOIU.Automatic)
-    m = MOIU.InstanceManager(InstanceForManager{Float64}(), mode)
-    @test MOIU.mode(m) == mode
-    config = MOIT.TestConfig(solve=false)
-    MOIT.contlineartest(m, config)
-end
-
 @testset "InstanceManager constructor with solver" begin
     s = MOIU.MockSolverInstance(InstanceForMock{Float64}())
     m = MOIU.InstanceManager(InstanceForManager{Float64}(), s)
+    @test MOI.isempty(m)
+    @test MOIU.state(m) == MOIU.EmptySolver
     @test MOIU.mode(m) == MOIU.Automatic
-    config = MOIT.TestConfig(solve=false)
-    MOIT.contlineartest(m, config)
+end
+
+for state in (MOIU.NoSolver, MOIU.EmptySolver, MOIU.AttachedSolver)
+    @testset "Optimization tests in state $state and mode $mode" for mode in (MOIU.Manual, MOIU.Automatic)
+        m = MOIU.InstanceManager(InstanceForManager{Float64}(), mode)
+        if state != MOIU.NoSolver
+            s = MOIU.MockSolverInstance(InstanceForMock{Float64}())
+            MOIU.resetsolver!(m, s)
+            if state == MOIU.AttachedSolver
+                MOIU.attachsolver!(m)
+            end
+        end
+        @test MOIU.state(m) == state
+        @test MOIU.mode(m) == mode
+        config = MOIT.TestConfig(solve=false)
+        MOIT.contlineartest(m, config)
+    end
 end
