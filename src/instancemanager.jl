@@ -177,9 +177,6 @@ end
 function MOI.canaddconstraint(m::InstanceManager, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     MOI.canaddconstraint(m.instance, F, S) || return false
     if m.state == AttachedSolver && m.mode == Manual
-        # TODO: The indices of func should be mapped, but that's an expensive
-        # operation. Hope that the solver doesn't care.
-        # Maybe canaddconstraint should just be a function of the types.
         MOI.canaddconstraint(m.solver, F, S) || return false
     end
     return true
