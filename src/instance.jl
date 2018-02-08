@@ -514,8 +514,8 @@ macro instance(instancename, ss, sst, vs, vst, sf, sft, vf, vft)
                    $(_getCV.(funs)...))
         end
 
-        MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(scalarfuns)...)}}, ::Type{<:Union{$(_typedset.(scalarsets)...)}}) where T = true
-        MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(vectorfuns)...)}}, ::Type{<:Union{$(_typedset.(vectorsets)...)}}) where T = true
+        $MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(scalarfuns)...)}}, ::Type{<:Union{$(_typedset.(scalarsets)...)}}) where T = true
+        $MOI.canaddconstraint(instance::$instancename{T}, ::Type{<:Union{$(_typedfun.(vectorfuns)...)}}, ::Type{<:Union{$(_typedset.(vectorsets)...)}}) where T = true
 
         $code
 
