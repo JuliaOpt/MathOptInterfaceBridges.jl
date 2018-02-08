@@ -145,6 +145,21 @@ end
 
     MOI.empty!(m)
     @test MOIU.state(m) == MOIU.AttachedSolver
+
+    m.solver.canaddvar = false # Simulate solver for which MOI.canaddvariable returns false
+    MOI.addvariable!(m)
+    @test MOIU.state(m) == MOIU.EmptySolver
+    res = MOIU.attachsolver!(m)
+    @test res.status == MOI.CopyOtherError
+    @test MOIU.state(m) == MOIU.EmptySolver
+
+    m.solver.canaddvar = true
+    res = MOIU.attachsolver!(m)
+    @test res.status == MOI.CopySuccess
+    @test MOIU.state(m) == MOIU.AttachedSolver
+    m.solver.canaddvar = false
+    MOI.addvariables!(m, 2)
+    @test MOIU.state(m) == MOIU.EmptySolver
 end
 
 @testset "InstanceManager constructor with solver" begin
