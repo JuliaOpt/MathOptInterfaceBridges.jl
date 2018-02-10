@@ -1,6 +1,3 @@
-
-@MOIU.instance InstanceForMock (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
-
 @testset "Mock solver continuous linear tests" begin
     instance = MOIU.MockSolverInstance(InstanceForMock{Float64}())
     config = MOIT.TestConfig(solve=false)

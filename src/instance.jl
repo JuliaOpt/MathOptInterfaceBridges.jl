@@ -253,6 +253,24 @@ end
 
 MOI.copy!(dest::AbstractInstance, src::MOI.AbstractInstance) = defaultcopy!(dest, src)
 
+# Allocate-Load Interface
+# Even if the instance does not need it and use defaultcopy!, it could be used by a layer that needs it
+needsallocateload(instance::AbstractInstance) = false
+
+allocatevariables!(instance::AbstractInstance, nvars) = MOI.addvariables!(instance, nvars)
+allocate!(instance::AbstractInstance, attr...) = MOI.set!(instance, attr...)
+canallocate(instance::AbstractInstance, attr::MOI.AnyAttribute) = MOI.canset(instance, attr)
+canallocate(instance::AbstractInstance, attr::MOI.AnyAttribute, IdxT::Type{<:MOI.Index}) = MOI.canset(instance, attr, IdxT)
+allocateconstraint!(instance::AbstractInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = MOI.addconstraint!(instance, f, s)
+canallocateconstraint(instance::AbstractInstance, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) = MOI.canaddconstraint(instance, F, S)
+
+function loadvariables!(::AbstractInstance, nvars) end
+function load!(::AbstractInstance, attr...) end
+canload(instance::AbstractInstance, attr::MOI.AnyAttribute) = MOI.canset(instance, attr)
+canload(instance::AbstractInstance, attr::MOI.AnyAttribute, IdxT::Type{<:MOI.Index}) = MOI.canset(instance, attr, IdxT)
+function loadconstraint!(::AbstractInstance, ::CI, ::MOI.AbstractFunction, ::MOI.AbstractSet) end
+canloadconstraint(instance::AbstractInstance, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) = MOI.canaddconstraint(instance, F, S)
+
 # Can be used to access constraints of an instance
 """
 broadcastcall(f::Function, instance::AbstractInstance)

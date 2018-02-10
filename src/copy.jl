@@ -164,11 +164,11 @@ Returns the index for the constraint to be used in `loadconstraint!` that will b
 function allocateconstraint! end
 
 """
-    canallocateconstraint(instance::AbstractInstance, func::AbstractFunction, set::AbstractSet)::Bool
+    canallocateconstraint(instance::AbstractInstance, F::Type{<:AbstractFunction}, S::Type{<:AbstractSet})::Bool
 
-Return a `Bool` indicating whether it is possible to allocate the constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is defined by `func`, and ``\\mathcal{S}`` is defined by `set`.
+Return a `Bool` indicating whether it is possible to allocate a constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is of type `F`, and ``\\mathcal{S}`` is of type `S`.
 """
-canallocateconstraint(instance::MOI.AbstractInstance, func::MOI.AbstractFunction, set::MOI.AbstractSet) = false
+canallocateconstraint(instance::MOI.AbstractInstance, ::Type{<:MOI.AbstractFunction}, ::Type{<:MOI.AbstractSet}) = false
 
 """
     loadvariables!(instance::MOI.AbstractInstance, nvars::Integer)
@@ -205,25 +205,24 @@ Sets the constraint function and set for the constraint of index `ci`.
 function loadconstraint! end
 
 """
-    canloadconstraint(instance::AbstractInstance, func::AbstractFunction, set::AbstractSet)::Bool
+    canloadconstraint(instance::AbstractInstance, F::Type{<:AbstractFunction}, S::Type{<:AbstractSet})::Bool
 
-Return a `Bool` indicating whether it is possible to load the constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is defined by `func`, and ``\\mathcal{S}`` is defined by `set`.
+Return a `Bool` indicating whether it is possible to load a constraint ``f(x) \\in \\mathcal{S}`` where ``f`` is of type `F`, and ``\\mathcal{S}`` is of type `S`.
 """
-canloadconstraint(instance::MOI.AbstractInstance, func::MOI.AbstractFunction, set::MOI.AbstractSet) = false
+canloadconstraint(instance::MOI.AbstractInstance, ::Type{<:MOI.AbstractFunction}, ::Type{<:MOI.AbstractSet}) = false
 
 function allocateconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     # Allocate constraints
+    if !canallocateconstraint(dest, F, S)
+        return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
+    end
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
     for ci_src in cis_src
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
-        f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        if canallocateconstraint(dest, f_dest, s)
-            ci_dest = allocateconstraint!(dest, f_dest, s)
-            idxmap.conmap[ci_src] = ci_dest
-        else
-            return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
-        end
+        f_dest = mapvariables(idxmap, f_src)
+        ci_dest = allocateconstraint!(dest, f_dest, s)
+        idxmap.conmap[ci_src] = ci_dest
     end
 
     # Allocate constraint attributes
@@ -243,17 +242,16 @@ end
 
 function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
     # Load constraints
+    if !canloadconstraint(dest, F, S)
+        return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
+    end
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
     for ci_src in cis_src
         ci_dest = idxmap[ci_src]
         f_src = MOI.get(src, MOI.ConstraintFunction(), ci_src)
         f_dest = mapvariables(idxmap, f_src)
         s = MOI.get(src, MOI.ConstraintSet(), ci_src)
-        if canloadconstraint(dest, f_dest, s)
-            loadconstraint!(dest, ci_dest, f_dest, s)
-        else
-            return MOI.CopyResult(MOI.CopyUnsupportedConstraint, "Unsupported $F-in-$S constraint", idxmap)
-        end
+        loadconstraint!(dest, ci_dest, f_dest, s)
     end
 
     # Load constraint attributes
@@ -313,7 +311,10 @@ function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     # Allocate constraints
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
-        allocateconstraints!(dest, src, idxmap, F, S)
+        res = allocateconstraints!(dest, src, idxmap, F, S)
+        if res.status != MOI.CopySuccess
+            return res
+        end
     end
 
     # Load variables
