@@ -17,6 +17,7 @@ mutable struct MockSolverInstance <: MOI.AbstractSolverInstance
     attribute::Int # MockInstanceAttribute
     varattribute::Dict{MOI.VariableIndex,Int} # MockVariableAttribute
     conattribute::Dict{MOI.ConstraintIndex,Int} # MockConstraintAttribute
+    needsallocateload::Bool # Allows to tests the Allocate-Load interface, see copy!
     canaddvar::Bool
     solved::Bool
     terminationstatus::MOI.TerminationStatusCode
@@ -41,6 +42,7 @@ MockSolverInstance(instance::MOI.AbstractStandaloneInstance) =
                        0,
                        Dict{MOI.VariableIndex,Int}(),
                        Dict{MOI.ConstraintIndex,Int}(),
+                       false,
                        true,
                        false,
                        MOI.Success,
@@ -196,5 +198,31 @@ end
 
 # TODO: transformconstraint and cantransformconstraint
 
+function MOI.copy!(mock::MockSolverInstance, src::MOI.AbstractInstance)
+    if needsallocateload(mock)
+        allocateload!(mock, src)
+    else
+        defaultcopy!(mock, src)
+    end
+end
 
-MOI.copy!(mock::MockSolverInstance, src::MOI.AbstractInstance) = defaultcopy!(mock, src)
+# Allocate-Load Interface
+needsallocateload(mock::MockSolverInstance) = mock.needsallocateload
+
+allocatevariables!(mock::MockSolverInstance, nvars) = allocatevariables!(mock.instance, nvars)
+allocate!(mock::MockSolverInstance, attr::MOI.AnyAttribute, value) = allocate!(mock.instance, attr, value)
+allocate!(mock::MockSolverInstance, attr::MOI.ObjectiveFunction, value) = allocate!(mock.instance, attr, xor_variables(value))
+allocate!(mock::MockSolverInstance, attr::MOI.AnyAttribute, idx::MOI.Index, value) = allocate!(mock.instance, attr, xor_index(idx), value)
+canallocate(mock::MockSolverInstance, attr::MOI.AnyAttribute) = canallocate(mock.instance, attr)
+canallocate(mock::MockSolverInstance, attr::MOI.AnyAttribute, IdxT::Type{<:MOI.Index}) = canallocate(mock.instance, attr, IdxT)
+allocateconstraint!(mock::MockSolverInstance, f::MOI.AbstractFunction, s::MOI.AbstractSet) = xor_index(allocateconstraint!(mock.instance, xor_variables(f), s))
+canallocateconstraint(mock::MockSolverInstance, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) = canallocateconstraint(mock.instance, F, S)
+
+loadvariables!(mock::MockSolverInstance, nvars) = loadvariables!(mock.instance, nvars)
+load!(mock::MockSolverInstance, attr::MOI.AnyAttribute, value) = load!(mock.instance, attr, value)
+load!(mock::MockSolverInstance, attr::MOI.ObjectiveFunction, value) = load!(mock.instance, attr, xor_variables(value))
+load!(mock::MockSolverInstance, attr::MOI.AnyAttribute, idx::MOI.Index, value) = load!(mock.instance, attr, xor_index(idx), value)
+canload(mock::MockSolverInstance, attr::MOI.AnyAttribute) = canload(mock.instance, attr)
+canload(mock::MockSolverInstance, attr::MOI.AnyAttribute, IdxT::Type{<:MOI.Index}) = canload(mock.instance, attr, IdxT)
+loadconstraint!(mock::MockSolverInstance, ci::CI, f::MOI.AbstractFunction, s::MOI.AbstractSet) = loadconstraint!(mock.instance, xor_index(ci), xor_variables(f), s)
+canloadconstraint(mock::MockSolverInstance, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) = canloadconstraint(mock.instance, F, S)

@@ -1,15 +1,5 @@
 MOIU.@instance LPInstance () (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives) () (SingleVariable,) (ScalarAffineFunction,) (VectorOfVariables,) (VectorAffineFunction,)
 
-MOIU.@instance(Instance,
-               (), # <- example of giving no set
-               (EqualTo, GreaterThan, LessThan, Interval),
-               (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, GeometricMeanCone, ExponentialCone, DualExponentialCone, PositiveSemidefiniteConeTriangle, RootDetConeTriangle, LogDetConeTriangle),
-               (PowerCone, DualPowerCone),
-               (SingleVariable,), # <- example of giving only one set
-               (ScalarAffineFunction, ScalarQuadraticFunction),
-               (VectorOfVariables,),
-               (VectorAffineFunction, VectorQuadraticFunction))
-
 @testset "Name test" begin
     MOIT.nametest(Instance{Float64}())
 end
@@ -20,14 +10,6 @@ end
 
 @testset "Empty test" begin
     MOIT.emptytest(Instance{Float64}())
-end
-
-@testset "Copy test" begin
-    MOIT.failcopytestc(Instance{Float64}())
-    MOIT.failcopytestia(Instance{Float64}())
-    MOIT.failcopytestva(Instance{Float64}())
-    MOIT.failcopytestca(Instance{Float64}())
-    MOIT.copytest(Instance{Float64}(), Instance{Float64}())
 end
 
 @testset "canaddconstraint test" begin
