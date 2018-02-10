@@ -207,7 +207,7 @@ function MOI.copy!(mock::MockSolverInstance, src::MOI.AbstractInstance)
 end
 
 # Allocate-Load Interface
-needsallocateload(mock::MockSolverInstance) = mock.needsallocateload
+needsallocateload(mock::MockSolverInstance) = mock.needsallocateload || needsallocateload(mock.instance)
 
 allocatevariables!(mock::MockSolverInstance, nvars) = allocatevariables!(mock.instance, nvars)
 allocate!(mock::MockSolverInstance, attr::MOI.AnyAttribute, value) = allocate!(mock.instance, attr, value)
