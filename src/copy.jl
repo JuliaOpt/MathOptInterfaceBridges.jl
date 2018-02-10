@@ -20,45 +20,45 @@ Base.delete!(idxmap::IndexMap, ci::MOI.ConstraintIndex) = delete!(idxmap.conmap,
 Base.keys(idxmap::IndexMap) = Iterators.flatten((keys(idxmap.varmap), keys(idxmap.conmap)))
 
 """
-    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+    passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!)
 
-Copy the instance attributes from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+Pass the instance attributes from the instance `src` the instance `dest` using `canpassattr` to check if the attribute can be passed and `passattr!` to pass the attribute.
 
-    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{MOI.VariableIndex}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+    passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{MOI.VariableIndex}, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!)
 
-Copy the variable attributes from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+Pass the variable attributes from the instance `src` the instance `dest` using `canpassattr` to check if the attribute can be passed and `passattr!` to pass the attribute.
 
-    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{MOI.ConstraintIndex{F, S}}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!) where {F, S}
+    passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{MOI.ConstraintIndex{F, S}}, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!) where {F, S}
 
-Copy the constraint attributes of `F`-in-`S` constraints from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+Pass the constraint attributes of `F`-in-`S` constraints from the instance `src` the instance `dest` using `canpassattr` to check if the attribute can be passed and `passattr!` to pass the attribute.
 """
-function copyattributes! end
+function passattributes! end
 
-function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+function passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!)
     # Copy instance attributes
     attrs = MOI.get(src, MOI.ListOfInstanceAttributesSet())
-    _copyattributes!(dest, src, idxmap, attrs, tuple(), tuple(), tuple(), cancopyattr, copyattr!)
+    _passattributes!(dest, src, idxmap, attrs, tuple(), tuple(), tuple(), canpassattr, passattr!)
 end
-function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{VI}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+function passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{VI}, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!)
     # Copy variable attributes
     attrs = MOI.get(src, MOI.ListOfVariableAttributesSet())
     vis_dest = map(vi -> idxmap[vi], vis_src)
-    _copyattributes!(dest, src, idxmap, attrs, (VI,), (vis_src,), (vis_dest,), cancopyattr, copyattr!)
+    _passattributes!(dest, src, idxmap, attrs, (VI,), (vis_src,), (vis_dest,), canpassattr, passattr!)
 end
-function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{CI{F, S}}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!) where {F, S}
+function passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{CI{F, S}}, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!) where {F, S}
     # Copy constraint attributes
     attrs = MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
     cis_dest = map(ci -> idxmap[ci], cis_src)
-    _copyattributes!(dest, src, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), cancopyattr, copyattr!)
+    _passattributes!(dest, src, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), canpassattr, passattr!)
 end
 
-function _copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, attrs, canargs, getargs, setargs, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+function _passattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, attrs, canargs, getargs, setargs, canpassattr::Function=MOI.canset, passattr!::Function=MOI.set!)
     for attr in attrs
         if MOI.canget(src, attr, canargs...)
-            if !cancopyattr(dest, attr, canargs...)
+            if !canpassattr(dest, attr, canargs...)
                 return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
             end
-            copyattr!(dest, attr, setargs..., attribute_value_map(idxmap, MOI.get(src, attr, getargs...)))
+            passattr!(dest, attr, setargs..., attribute_value_map(idxmap, MOI.get(src, attr, getargs...)))
         end
     end
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
@@ -84,7 +84,7 @@ function copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
         end
     end
 
-    return copyattributes!(dest, src, idxmap, cis_src)
+    return passattributes!(dest, src, idxmap, cis_src)
 end
 
 attribute_value_map(idxmap, f::MOI.AbstractFunction) = mapvariables(idxmap, f)
@@ -104,11 +104,11 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     end
 
     # Copy variable attributes
-    res = copyattributes!(dest, src, idxmap, vis_src)
+    res = passattributes!(dest, src, idxmap, vis_src)
     res.status == MOI.CopySuccess || return res
 
     # Copy instance attributes
-    res = copyattributes!(dest, src, idxmap)
+    res = passattributes!(dest, src, idxmap)
     res.status == MOI.CopySuccess || return res
 
     # Copy constraints
@@ -242,7 +242,7 @@ function allocateconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInsta
         idxmap.conmap[ci_src] = ci_dest
     end
 
-    return copyattributes!(dest, src, idxmap, cis_src, canallocate, allocate!)
+    return passattributes!(dest, src, idxmap, cis_src, canallocate, allocate!)
 end
 
 function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
@@ -259,7 +259,7 @@ function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
         loadconstraint!(dest, ci_dest, f_dest, s)
     end
 
-    return copyattributes!(dest, src, idxmap, cis_src, canload, load!)
+    return passattributes!(dest, src, idxmap, cis_src, canload, load!)
 end
 
 """
@@ -281,11 +281,11 @@ function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     end
 
     # Allocate variable attributes
-    res = copyattributes!(dest, src, idxmap, vis_src, canallocate, allocate!)
+    res = passattributes!(dest, src, idxmap, vis_src, canallocate, allocate!)
     res.status == MOI.CopySuccess || return res
 
     # Allocate instance attributes
-    res = copyattributes!(dest, src, idxmap, canallocate, allocate!)
+    res = passattributes!(dest, src, idxmap, canallocate, allocate!)
     res.status == MOI.CopySuccess || return res
 
     # Allocate constraints
@@ -299,11 +299,11 @@ function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     loadvariables!(dest, nvars)
 
     # Load variable attributes
-    res = copyattributes!(dest, src, idxmap, vis_src, canload, load!)
+    res = passattributes!(dest, src, idxmap, vis_src, canload, load!)
     res.status == MOI.CopySuccess || return res
 
     # Load instance attributes
-    res = copyattributes!(dest, src, idxmap, canload, load!)
+    res = passattributes!(dest, src, idxmap, canload, load!)
     res.status == MOI.CopySuccess || return res
 
     # Copy constraints
