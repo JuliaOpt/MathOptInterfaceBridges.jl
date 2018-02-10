@@ -20,6 +20,51 @@ Base.delete!(idxmap::IndexMap, ci::MOI.ConstraintIndex) = delete!(idxmap.conmap,
 Base.keys(idxmap::IndexMap) = Iterators.flatten((keys(idxmap.varmap), keys(idxmap.conmap)))
 
 """
+    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+
+Copy the instance attributes from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+
+    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{MOI.VariableIndex}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+
+Copy the variable attributes from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+
+    copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{MOI.ConstraintIndex{F, S}}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!) where {F, S}
+
+Copy the constraint attributes of `F`-in-`S` constraints from the instance `src` the instance `dest` using `cancopyattr` to check if the attribute can be copied and `copyattr!` to copy the attribute.
+"""
+function copyattributes! end
+
+function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+    # Copy instance attributes
+    attrs = MOI.get(src, MOI.ListOfInstanceAttributesSet())
+    _copyattributes!(dest, src, idxmap, attrs, tuple(), tuple(), tuple(), cancopyattr, copyattr!)
+end
+function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, vis_src::Vector{VI}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+    # Copy variable attributes
+    attrs = MOI.get(src, MOI.ListOfVariableAttributesSet())
+    vis_dest = map(vi -> idxmap[vi], vis_src)
+    _copyattributes!(dest, src, idxmap, attrs, (VI,), (vis_src,), (vis_dest,), cancopyattr, copyattr!)
+end
+function copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, cis_src::Vector{CI{F, S}}, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!) where {F, S}
+    # Copy constraint attributes
+    attrs = MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+    cis_dest = map(ci -> idxmap[ci], cis_src)
+    _copyattributes!(dest, src, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), cancopyattr, copyattr!)
+end
+
+function _copyattributes!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, attrs, canargs, getargs, setargs, cancopyattr::Function=MOI.canset, copyattr!::Function=MOI.set!)
+    for attr in attrs
+        if MOI.canget(src, attr, canargs...)
+            if !cancopyattr(dest, attr, canargs...)
+                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
+            end
+            copyattr!(dest, attr, setargs..., attribute_value_map(idxmap, MOI.get(src, attr, getargs...)))
+        end
+    end
+    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
+end
+
+"""
     copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
 
 Copy the constraints of type `F`-in-`S` from the instance `src` the instance `dest` and fill `idxmap` accordingly.
@@ -39,19 +84,7 @@ function copyconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
         end
     end
 
-    # Copy constraint attributes
-    cis_dest = map(ci -> idxmap[ci], cis_src)
-    for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-        if MOI.canget(src, attr, CI{F, S})
-            if !MOI.canset(dest, attr, CI{F, S})
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, cis_src)
-            MOI.set!(dest, attr, cis_dest, vector_of_values)
-        end
-    end
-
-    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
+    return copyattributes!(dest, src, idxmap, cis_src)
 end
 
 attribute_value_map(idxmap, f::MOI.AbstractFunction) = mapvariables(idxmap, f)
@@ -71,34 +104,18 @@ function defaultcopy!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     end
 
     # Copy variable attributes
-    vis_dest = map(vi -> idxmap[vi], vis_src)
-    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
-        if MOI.canget(src, attr, VI)
-            if !MOI.canset(dest, attr, VI)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, vis_src)
-            MOI.set!(dest, attr, vis_dest, vector_of_values)
-        end
-    end
+    res = copyattributes!(dest, src, idxmap, vis_src)
+    res.status == MOI.CopySuccess || return res
 
     # Copy instance attributes
-    for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
-        if MOI.canget(src, attr)
-            if !MOI.canset(dest, attr)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            MOI.set!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))
-        end
-    end
+    res = copyattributes!(dest, src, idxmap)
+    res.status == MOI.CopySuccess || return res
 
     # Copy constraints
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
         res = copyconstraints!(dest, src, idxmap, F, S)
-        if res.status != MOI.CopySuccess
-            return res
-        end
+        res.status == MOI.CopySuccess || return res
     end
 
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
@@ -225,19 +242,7 @@ function allocateconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInsta
         idxmap.conmap[ci_src] = ci_dest
     end
 
-    # Allocate constraint attributes
-    cis_dest = map(ci -> idxmap[ci], cis_src)
-    for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-        if MOI.canget(src, attr, CI{F, S})
-            if !canallocate(dest, attr, CI{F, S})
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, cis_src)
-            allocate!(dest, attr, cis_dest, vector_of_values)
-        end
-    end
-
-    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
+    return copyattributes!(dest, src, idxmap, cis_src, canallocate, allocate!)
 end
 
 function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance, idxmap::IndexMap, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet}
@@ -254,19 +259,7 @@ function loadconstraints!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance,
         loadconstraint!(dest, ci_dest, f_dest, s)
     end
 
-    # Load constraint attributes
-    cis_dest = map(ci -> idxmap[ci], cis_src)
-    for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-        if MOI.canget(src, attr, CI{F, S})
-            if !canload(dest, attr, CI{F, S})
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, cis_src)
-            load!(dest, attr, cis_dest, vector_of_values)
-        end
-    end
-
-    return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
+    return copyattributes!(dest, src, idxmap, cis_src, canload, load!)
 end
 
 """
@@ -288,67 +281,36 @@ function allocateload!(dest::MOI.AbstractInstance, src::MOI.AbstractInstance)
     end
 
     # Allocate variable attributes
-    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
-        if MOI.canget(src, attr, VI)
-            if !canallocate(dest, attr, VI)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, vis_src)
-            allocate!(dest, attr, vis_dest, vector_of_values)
-        end
-    end
+    res = copyattributes!(dest, src, idxmap, vis_src, canallocate, allocate!)
+    res.status == MOI.CopySuccess || return res
 
     # Allocate instance attributes
-    for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
-        if MOI.canget(src, attr)
-            if !canallocate(dest, attr)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            allocate!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))
-        end
-    end
+    res = copyattributes!(dest, src, idxmap, canallocate, allocate!)
+    res.status == MOI.CopySuccess || return res
 
     # Allocate constraints
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
         res = allocateconstraints!(dest, src, idxmap, F, S)
-        if res.status != MOI.CopySuccess
-            return res
-        end
+        res.status == MOI.CopySuccess || return res
     end
 
     # Load variables
     loadvariables!(dest, nvars)
 
     # Load variable attributes
-    vis_dest = map(vi -> idxmap[vi], vis_src)
-    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
-        if MOI.canget(src, attr, VI)
-            if !canload(dest, attr, VI)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            vector_of_values = MOI.get(src, attr, vis_src)
-            load!(dest, attr, vis_dest, vector_of_values)
-        end
-    end
+    res = copyattributes!(dest, src, idxmap, vis_src, canload, load!)
+    res.status == MOI.CopySuccess || return res
 
     # Load instance attributes
-    for attr in MOI.get(src, MOI.ListOfInstanceAttributesSet())
-        if MOI.canget(src, attr)
-            if !canload(dest, attr)
-                return MOI.CopyResult(MOI.CopyUnsupportedAttribute, "Unsupported attribute $attr", idxmap)
-            end
-            load!(dest, attr, attribute_value_map(idxmap, MOI.get(src, attr)))
-        end
-    end
+    res = copyattributes!(dest, src, idxmap, canload, load!)
+    res.status == MOI.CopySuccess || return res
 
     # Copy constraints
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         # do the rest in copyconstraints! which is type stable
         res = loadconstraints!(dest, src, idxmap, F, S)
-        if res.status != MOI.CopySuccess
-            return res
-        end
+        res.status == MOI.CopySuccess || return res
     end
 
     return MOI.CopyResult(MOI.CopySuccess, "", idxmap)
