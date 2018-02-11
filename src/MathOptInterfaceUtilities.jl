@@ -22,10 +22,10 @@ include("functions.jl")
 include("sets.jl")
 include("copy.jl")
 
-include("instance.jl")
+include("model.jl")
 include("parser.jl")
-include("mocksolverinstance.jl")
-include("instancemanager.jl")
+include("mockoptimizer.jl")
+include("cachingoptimizer.jl")
 
 include("bridge.jl")
 include("intervalbridge.jl")

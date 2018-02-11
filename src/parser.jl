@@ -2,8 +2,8 @@ using Base.Meta: isexpr
 
 
 """
-A parser for a simple human-readable of an MOI instance.
-This should be thought of as a compact way to write small instances
+A parser for a simple human-readable of an MOI model.
+This should be thought of as a compact way to write small models
 for tests, and not an exchange format.
 
 variables: x, y, z
@@ -181,15 +181,15 @@ function separatelabel(ex)
     end
 end
 
-function variabletoindex(instance, s::Symbol)
-    return MOI.get(instance, MOI.VariableIndex, String(s))
+function variabletoindex(model, s::Symbol)
+    return MOI.get(model, MOI.VariableIndex, String(s))
 end
 
-function variabletoindex(instance, s::Vector{Symbol})
-    return MOI.get.(instance, MOI.VariableIndex, String.(s))
+function variabletoindex(model, s::Vector{Symbol})
+    return MOI.get.(model, MOI.VariableIndex, String.(s))
 end
 
-variabletoindex(instance, s) = s
+variabletoindex(model, s) = s
 
 
 for typename in [:ParsedScalarAffineFunction,:ParsedVectorAffineFunction,
@@ -197,11 +197,11 @@ for typename in [:ParsedScalarAffineFunction,:ParsedVectorAffineFunction,
                  :ParsedSingleVariable,:ParsedVectorOfVariables]
     moiname = parse(replace(string(typename), "Parsed", "MOI."))
     fields = fieldnames(eval(typename))
-    constructor = Expr(:call, moiname, [Expr(:call,:variabletoindex,:instance,Expr(:.,:f,Base.Meta.quot(field))) for field in fields]...)
-    @eval parsedtoMOI(instance, f::$typename) = $constructor
+    constructor = Expr(:call, moiname, [Expr(:call,:variabletoindex,:model,Expr(:.,:f,Base.Meta.quot(field))) for field in fields]...)
+    @eval parsedtoMOI(model, f::$typename) = $constructor
 end
 
-function loadfromstring!(instance, s)
+function loadfromstring!(model, s)
     parsedlines = filter(ex -> ex != nothing,parse.(split(s,"\n")))
 
     for line in parsedlines
@@ -209,26 +209,26 @@ function loadfromstring!(instance, s)
         if label == :variables
             if isexpr(ex, :tuple)
                 for v in ex.args
-                    vindex = MOI.addvariable!(instance)
-                    MOI.set!(instance, MOI.VariableName(), vindex, String(v))
+                    vindex = MOI.addvariable!(model)
+                    MOI.set!(model, MOI.VariableName(), vindex, String(v))
                 end
             else
                 @assert isa(ex, Symbol)
-                vindex = MOI.addvariable!(instance)
-                MOI.set!(instance, MOI.VariableName(), vindex, String(ex))
+                vindex = MOI.addvariable!(model)
+                MOI.set!(model, MOI.VariableName(), vindex, String(ex))
             end
         elseif label == :maxobjective
-            f = parsedtoMOI(instance, parsefunction(ex))
-            MOI.set!(instance, MOI.ObjectiveFunction{typeof(f)}(), f)
-            MOI.set!(instance, MOI.ObjectiveSense(), MOI.MaxSense)
+            f = parsedtoMOI(model, parsefunction(ex))
+            MOI.set!(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+            MOI.set!(model, MOI.ObjectiveSense(), MOI.MaxSense)
         elseif label == :minobjective
-            f = parsedtoMOI(instance, parsefunction(ex))
-            MOI.set!(instance, MOI.ObjectiveFunction{typeof(f)}(), f)
-            MOI.set!(instance, MOI.ObjectiveSense(), MOI.MinSense)
+            f = parsedtoMOI(model, parsefunction(ex))
+            MOI.set!(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+            MOI.set!(model, MOI.ObjectiveSense(), MOI.MinSense)
         else
             # constraint
             @assert isexpr(ex, :call)
-            f = parsedtoMOI(instance, parsefunction(ex.args[2]))
+            f = parsedtoMOI(model, parsefunction(ex.args[2]))
             if ex.args[1] == :in
                 # Could be safer here
                 set = eval(MOI, ex.args[3])
@@ -241,8 +241,8 @@ function loadfromstring!(instance, s)
             else
                 error("Unrecognized expression $ex")
             end
-            cindex = MOI.addconstraint!(instance, f, set)
-            MOI.set!(instance, MOI.ConstraintName(), cindex, String(label))
+            cindex = MOI.addconstraint!(model, f, set)
+            MOI.set!(model, MOI.ConstraintName(), cindex, String(label))
         end
     end
 end

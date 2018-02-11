@@ -22,7 +22,7 @@ end
     @test MOIU.separatelabel(:(con1: [x,y] in S)) == (:con1, :([x,y] in S))
 end
 
-@MOIU.instance GeneralInstance (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle) () (SingleVariable,) (ScalarAffineFunction,ScalarQuadraticFunction) (VectorOfVariables,) (VectorAffineFunction,)
+@MOIU.model GeneralModel (ZeroOne, Integer) (EqualTo, GreaterThan, LessThan, Interval) (Zeros, Nonnegatives, Nonpositives, SecondOrderCone, RotatedSecondOrderCone, PositiveSemidefiniteConeTriangle) () (SingleVariable,) (ScalarAffineFunction,ScalarQuadraticFunction) (VectorOfVariables,) (VectorAffineFunction,)
 
 @testset "loadfromstring" begin
     @testset "one variable" begin
@@ -30,15 +30,15 @@ end
         variables: x
         bound: x >= 1.0
         """
-        instance = GeneralInstance{Float64}()
-        x = MOI.addvariable!(instance)
-        MOI.set!(instance, MOI.VariableName(), x, "x")
-        bound = MOI.addconstraint!(instance, MOI.SingleVariable(x), MOI.GreaterThan(1.0))
-        MOI.set!(instance, MOI.ConstraintName(), bound, "bound")
+        model = GeneralModel{Float64}()
+        x = MOI.addvariable!(model)
+        MOI.set!(model, MOI.VariableName(), x, "x")
+        bound = MOI.addconstraint!(model, MOI.SingleVariable(x), MOI.GreaterThan(1.0))
+        MOI.set!(model, MOI.ConstraintName(), bound, "bound")
 
-        instance2 = GeneralInstance{Float64}()
-        MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x"], ["bound"])
+        model2 = GeneralModel{Float64}()
+        MOIU.loadfromstring!(model2, s)
+        MOIU.test_models_equal(model, model2, ["x"], ["bound"])
     end
 
     @testset "linear constraints" begin
@@ -48,21 +48,21 @@ end
         linear2: x + y <= 1.0
         linear3: x + y == 1.0
         """
-        instance = GeneralInstance{Float64}()
-        x = MOI.addvariable!(instance)
-        y = MOI.addvariable!(instance)
-        MOI.set!(instance, MOI.VariableName(), x, "x")
-        MOI.set!(instance, MOI.VariableName(), y, "y")
-        linear1 = MOI.addconstraint!(instance, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.GreaterThan(1.0))
-        linear2 = MOI.addconstraint!(instance, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.LessThan(1.0))
-        linear3 = MOI.addconstraint!(instance, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.EqualTo(1.0))
-        MOI.set!(instance, MOI.ConstraintName(), linear1, "linear1")
-        MOI.set!(instance, MOI.ConstraintName(), linear2, "linear2")
-        MOI.set!(instance, MOI.ConstraintName(), linear3, "linear3")
+        model = GeneralModel{Float64}()
+        x = MOI.addvariable!(model)
+        y = MOI.addvariable!(model)
+        MOI.set!(model, MOI.VariableName(), x, "x")
+        MOI.set!(model, MOI.VariableName(), y, "y")
+        linear1 = MOI.addconstraint!(model, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.GreaterThan(1.0))
+        linear2 = MOI.addconstraint!(model, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.LessThan(1.0))
+        linear3 = MOI.addconstraint!(model, MOI.ScalarAffineFunction([x,y],[1.0,1.0],0.0), MOI.EqualTo(1.0))
+        MOI.set!(model, MOI.ConstraintName(), linear1, "linear1")
+        MOI.set!(model, MOI.ConstraintName(), linear2, "linear2")
+        MOI.set!(model, MOI.ConstraintName(), linear3, "linear3")
 
-        instance2 = GeneralInstance{Float64}()
-        MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x", "y"], ["linear1", "linear2", "linear3"])
+        model2 = GeneralModel{Float64}()
+        MOIU.loadfromstring!(model2, s)
+        MOIU.test_models_equal(model, model2, ["x", "y"], ["linear1", "linear2", "linear3"])
     end
 
     @testset "minimization: linear objective" begin
@@ -70,17 +70,17 @@ end
         variables: x, y
         minobjective: x + -2y + 1.0
         """
-        instance = GeneralInstance{Float64}()
-        x = MOI.addvariable!(instance)
-        y = MOI.addvariable!(instance)
-        MOI.set!(instance, MOI.VariableName(), x, "x")
-        MOI.set!(instance, MOI.VariableName(), y, "y")
-        MOI.set!(instance, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
-        MOI.set!(instance, MOI.ObjectiveSense(), MOI.MinSense)
+        model = GeneralModel{Float64}()
+        x = MOI.addvariable!(model)
+        y = MOI.addvariable!(model)
+        MOI.set!(model, MOI.VariableName(), x, "x")
+        MOI.set!(model, MOI.VariableName(), y, "y")
+        MOI.set!(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
+        MOI.set!(model, MOI.ObjectiveSense(), MOI.MinSense)
 
-        instance2 = GeneralInstance{Float64}()
-        MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x", "y"], String[])
+        model2 = GeneralModel{Float64}()
+        MOIU.loadfromstring!(model2, s)
+        MOIU.test_models_equal(model, model2, ["x", "y"], String[])
     end
 
     @testset "maximization: linear objective" begin
@@ -88,17 +88,17 @@ end
         variables: x, y
         maxobjective: x + -2y + 1.0
         """
-        instance = GeneralInstance{Float64}()
-        x = MOI.addvariable!(instance)
-        y = MOI.addvariable!(instance)
-        MOI.set!(instance, MOI.VariableName(), x, "x")
-        MOI.set!(instance, MOI.VariableName(), y, "y")
-        MOI.set!(instance, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
-        MOI.set!(instance, MOI.ObjectiveSense(), MOI.MaxSense)
+        model = GeneralModel{Float64}()
+        x = MOI.addvariable!(model)
+        y = MOI.addvariable!(model)
+        MOI.set!(model, MOI.VariableName(), x, "x")
+        MOI.set!(model, MOI.VariableName(), y, "y")
+        MOI.set!(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction([x,y],[1.0,-2.0],1.0))
+        MOI.set!(model, MOI.ObjectiveSense(), MOI.MaxSense)
 
-        instance2 = GeneralInstance{Float64}()
-        MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x", "y"], String[])
+        model2 = GeneralModel{Float64}()
+        MOIU.loadfromstring!(model2, s)
+        MOIU.test_models_equal(model, model2, ["x", "y"], String[])
     end
 
     @testset "SOC constraints" begin
@@ -108,23 +108,23 @@ end
         affsoc: [2x,y+1,-1*z] in SecondOrderCone(3)
         affsoc2: [1.0,2.0,3.0] in SecondOrderCone(3)
         """
-        instance = GeneralInstance{Float64}()
-        x = MOI.addvariable!(instance)
-        y = MOI.addvariable!(instance)
-        z = MOI.addvariable!(instance)
-        MOI.set!(instance, MOI.VariableName(), x, "x")
-        MOI.set!(instance, MOI.VariableName(), y, "y")
-        MOI.set!(instance, MOI.VariableName(), z, "z")
-        varsoc = MOI.addconstraint!(instance, MOI.VectorOfVariables([x,y,z]), MOI.SecondOrderCone(3))
-        affsoc = MOI.addconstraint!(instance, MOI.VectorAffineFunction([1,2,3],[x,y,z],[2.0,1.0,-1.0],[0.0,1.0,0.0]), MOI.SecondOrderCone(3))
-        affsoc2 = MOI.addconstraint!(instance, MOI.VectorAffineFunction(Int[],MOI.VariableIndex[],Float64[],[1.0,2.0,3.0]), MOI.SecondOrderCone(3))
-        MOI.set!(instance, MOI.ConstraintName(), varsoc, "varsoc")
-        MOI.set!(instance, MOI.ConstraintName(), affsoc, "affsoc")
-        MOI.set!(instance, MOI.ConstraintName(), affsoc2, "affsoc2")
+        model = GeneralModel{Float64}()
+        x = MOI.addvariable!(model)
+        y = MOI.addvariable!(model)
+        z = MOI.addvariable!(model)
+        MOI.set!(model, MOI.VariableName(), x, "x")
+        MOI.set!(model, MOI.VariableName(), y, "y")
+        MOI.set!(model, MOI.VariableName(), z, "z")
+        varsoc = MOI.addconstraint!(model, MOI.VectorOfVariables([x,y,z]), MOI.SecondOrderCone(3))
+        affsoc = MOI.addconstraint!(model, MOI.VectorAffineFunction([1,2,3],[x,y,z],[2.0,1.0,-1.0],[0.0,1.0,0.0]), MOI.SecondOrderCone(3))
+        affsoc2 = MOI.addconstraint!(model, MOI.VectorAffineFunction(Int[],MOI.VariableIndex[],Float64[],[1.0,2.0,3.0]), MOI.SecondOrderCone(3))
+        MOI.set!(model, MOI.ConstraintName(), varsoc, "varsoc")
+        MOI.set!(model, MOI.ConstraintName(), affsoc, "affsoc")
+        MOI.set!(model, MOI.ConstraintName(), affsoc2, "affsoc2")
 
-        instance2 = GeneralInstance{Float64}()
-        MOIU.loadfromstring!(instance2, s)
-        MOIU.test_instances_equal(instance, instance2, ["x", "y", "z"], ["varsoc", "affsoc", "affsoc2"])
+        model2 = GeneralModel{Float64}()
+        MOIU.loadfromstring!(model2, s)
+        MOIU.test_models_equal(model, model2, ["x", "y", "z"], ["varsoc", "affsoc", "affsoc2"])
     end
 
 end
