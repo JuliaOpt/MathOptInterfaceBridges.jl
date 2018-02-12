@@ -134,10 +134,8 @@ function MOI.set!(model::AbstractModel, ::MOI.VariableName, vi::VI, name::String
     model.varnames[vi] = name
     model.namesvar[name] = vi
 end
-MOI.set!(model::AbstractModel, ::MOI.VariableName, vi::Vector{VI}, name::Vector{String}) = MOI.set!.(model, MOI.VariableName(), vi, name)
 MOI.canget(model::AbstractModel, ::MOI.VariableName, ::Type{VI}) = true
 MOI.get(model::AbstractModel, ::MOI.VariableName, vi::VI) = get(model.varnames, vi, EMPTYSTRING)
-MOI.get(model::AbstractModel, ::MOI.VariableName, vi::Vector{VI}) = MOI.get.(model, MOI.VariableName(), vi)
 
 MOI.canget(model::AbstractModel, ::Type{VI}, name::String) = haskey(model.namesvar, name)
 MOI.get(model::AbstractModel, ::Type{VI}, name::String) = model.namesvar[name]
@@ -154,10 +152,8 @@ function MOI.set!(model::AbstractModel, ::MOI.ConstraintName, ci::CI, name::Stri
     model.connames[ci] = name
     model.namescon[name] = ci
 end
-MOI.set!(model::AbstractModel, ::MOI.ConstraintName, ci::Vector{<:CI}, name::Vector{String}) = MOI.set!.(model, MOI.ConstraintName(), ci, name)
 MOI.canget(model::AbstractModel, ::MOI.ConstraintName, ::Type{<:CI}) = true
 MOI.get(model::AbstractModel, ::MOI.ConstraintName, ci::CI) = get(model.connames, ci, EMPTYSTRING)
-MOI.get(model::AbstractModel, ::MOI.ConstraintName, ci::Vector{<:CI}) = MOI.get.(model, MOI.ConstraintName(), ci)
 
 MOI.canget(model::AbstractModel, ::Type{<:CI}, name::String) = haskey(model.namescon, name)
 MOI.get(model::AbstractModel, ::Type{<:CI}, name::String) = model.namescon[name]
