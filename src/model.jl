@@ -168,7 +168,13 @@ MOI.canset(model::AbstractModel, ::MOI.ObjectiveSense) = true
 function MOI.set!(model::AbstractModel, ::MOI.ObjectiveSense, sense::MOI.OptimizationSense)
     model.sense = sense
 end
-MOI.get(model::AbstractModel, ::MOI.ObjectiveFunction) = model.objective
+MOI.canget(model::AbstractModel, ::MOI.ObjectiveFunction{T}) where T = typeof(model.objective) == T
+function MOI.get(model::AbstractModel, ::MOI.ObjectiveFunction{T})::T where T
+    if typeof(model.objective) != T
+        throw(InexactError())
+    end
+    model.objective
+end
 MOI.canset(model::AbstractModel, ::MOI.ObjectiveFunction) = true
 function MOI.set!(model::AbstractModel, ::MOI.ObjectiveFunction, f::MOI.AbstractFunction)
     # f needs to be copied, see #2
@@ -227,7 +233,6 @@ MOI.canget(model::AbstractModel, ::Union{MOI.NumberOfVariables,
                                          MOI.NumberOfConstraints,
                                          MOI.ListOfConstraints,
                                          MOI.ListOfConstraintIndices,
-                                         MOI.ObjectiveFunction,
                                          MOI.ObjectiveSense}) = true
 
 MOI.canget(model::AbstractModel, ::Union{MOI.ConstraintFunction,
