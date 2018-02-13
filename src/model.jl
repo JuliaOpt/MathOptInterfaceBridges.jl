@@ -223,15 +223,15 @@ function MOI.get(model::AbstractModel, loc::MOI.ListOfConstraintIndices)
 end
 
 MOI.canget(model::AbstractModel, ::Union{MOI.NumberOfVariables,
-                                               MOI.ListOfVariableIndices,
-                                               MOI.NumberOfConstraints,
-                                               MOI.ListOfConstraints,
-                                               MOI.ListOfConstraintIndices,
-                                               MOI.ObjectiveFunction,
-                                               MOI.ObjectiveSense}) = true
+                                         MOI.ListOfVariableIndices,
+                                         MOI.NumberOfConstraints,
+                                         MOI.ListOfConstraints,
+                                         MOI.ListOfConstraintIndices,
+                                         MOI.ObjectiveFunction,
+                                         MOI.ObjectiveSense}) = true
 
 MOI.canget(model::AbstractModel, ::Union{MOI.ConstraintFunction,
-                                               MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
+                                         MOI.ConstraintSet}, ::Type{<:MOI.Index}) = true
 
 function MOI.get(model::AbstractModel, ::MOI.ConstraintFunction, ci::CI)
     _getfunction(model, ci, getconstrloc(model, ci))
