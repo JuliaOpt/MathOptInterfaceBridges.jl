@@ -33,9 +33,6 @@ MOIU.@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (Sca
     @test (@inferred MOI.get(model, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Int},MOI.GreaterThan{Int}}())) == [c2]
 end
 
-using MathOptInterfaceTests
-const MOIT = MathOptInterfaceTests
-
 MOIU.@bridge GeoMean MOIU.GeoMeanBridge () () (GeometricMeanCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 MOIU.@bridge RootDet MOIU.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 
