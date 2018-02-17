@@ -63,11 +63,11 @@ function GeoMeanBridge{T}(model, f::MOI.VectorAffineFunction{T}, s::MOI.Geometri
         if i > n
             MOI.ScalarAffineFunction{T}([xl1], [sN], zero(T))
         else
-            eachscalar(f)[1+i]
+            MOIU.eachscalar(f)[1+i]
         end
     end
 
-    t = eachscalar(f)[1]
+    t = MOIU.eachscalar(f)[1]
     # With sqrt(2)^l*t - xl1, we should scale both the ConstraintPrimal and ConstraintDual
     tubc = MOI.addconstraint!(model, MOI.ScalarAffineFunction([t.variables; xl1], [t.coefficients; -sN], t.constant), MOI.LessThan(zero(T)))
 
@@ -84,7 +84,7 @@ function GeoMeanBridge{T}(model, f::MOI.VectorAffineFunction{T}, s::MOI.Geometri
                 b = MOI.ScalarAffineFunction{T}(MOI.SingleVariable(xij[offsetnext+2j]))
             end
             c = MOI.ScalarAffineFunction{T}(MOI.SingleVariable(xij[offset+j]))
-            socrc[offset + j] = MOI.addconstraint!(model, moivcat(a, b, c), MOI.RotatedSecondOrderCone(3))
+            socrc[offset + j] = MOI.addconstraint!(model, MOIU.moivcat(a, b, c), MOI.RotatedSecondOrderCone(3))
         end
         offset = offsetnext
     end

@@ -1,12 +1,12 @@
 __precompile__()
-module MathOptInterfaceUtilities
+module MathOptInterfaceBridges
+const MOIB = MathOptInterfaceBridges # used in macro
 
 using Compat # For lastindex
 
 using MathOptInterface
 const MOI = MathOptInterface
-
-const MOIU = MathOptInterfaceUtilities # used in macro
+const MOIU = MathOptInterface.Utilities
 
 const SVF = MOI.SingleVariable
 const VVF = MOI.VectorOfVariables
@@ -17,15 +17,6 @@ const VQF{T} = MOI.VectorQuadraticFunction{T}
 
 const VI = MOI.VariableIndex
 const CI = MOI.ConstraintIndex
-
-include("functions.jl")
-include("sets.jl")
-include("copy.jl")
-
-include("model.jl")
-include("parser.jl")
-include("mockoptimizer.jl")
-include("cachingoptimizer.jl")
 
 include("bridge.jl")
 include("intervalbridge.jl")

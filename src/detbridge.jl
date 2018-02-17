@@ -20,7 +20,7 @@ function extract_eigenvalues(model, f::MOI.VectorAffineFunction{T}, d::Int) wher
 
     Δ = MOI.addvariables!(model, n)
 
-    X = eachscalar(f)[2:(n+1)]
+    X = MOIU.eachscalar(f)[2:(n+1)]
     m = length(X.outputindex)
     M = m + n + d
 
@@ -46,7 +46,7 @@ function extract_eigenvalues(model, f::MOI.VectorAffineFunction{T}, d::Int) wher
     Y = MOI.VectorAffineFunction(outputindex, variables, coefficients, constant)
     sdindex = MOI.addconstraint!(model, Y, MOI.PositiveSemidefiniteConeTriangle(2d))
 
-    t = eachscalar(f)[1]
+    t = MOIU.eachscalar(f)[1]
     D = Δ[trimap.(1:d, 1:d)]
     t, D, Δ, sdindex
 end
@@ -169,7 +169,7 @@ function RootDetBridge{T}(model, f::MOI.VectorAffineFunction{T}, s::MOI.RootDetC
     d = s.dimension
     t, D, Δ, sdindex = extract_eigenvalues(model, f, d)
     DF = MOI.VectorAffineFunction{T}(MOI.VectorOfVariables(D))
-    gmindex = MOI.addconstraint!(model, moivcat(t, DF), MOI.GeometricMeanCone(d+1))
+    gmindex = MOI.addconstraint!(model, MOIU.moivcat(t, DF), MOI.GeometricMeanCone(d+1))
 
     RootDetBridge(Δ, sdindex, gmindex)
 end

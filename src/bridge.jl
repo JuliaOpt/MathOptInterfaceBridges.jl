@@ -128,7 +128,7 @@ MOI.addvariable!(b::AbstractBridgeOptimizer) = MOI.addvariable!(b.model)
 MOI.addvariables!(b::AbstractBridgeOptimizer, n) = MOI.addvariables!(b.model, n)
 
 function _mois(t)
-    _moi.(t.args)
+    MOIU._moi.(t.args)
 end
 
 """
@@ -139,15 +139,15 @@ To give no set/function, write `()`, to give one set `S`, write `(S,)`.
 
 ### Examples
 
-The model bridging the constraints `ScalarAffineFunction in Interval` is created as follows:
+The optimizer layer bridging the constraints `ScalarAffineFunction`-in-`Interval` is created as follows:
 ```julia
-@bridge SplitInterval MOIU.SplitIntervalBridge () (Interval,) () () () (ScalarAffineFunction,) () ()
+@bridge SplitInterval MOIB.SplitIntervalBridge () (Interval,) () () () (ScalarAffineFunction,) () ()
 ```
-Given an model `model` implementing `ScalarAffineFunction in GreaterThan` and `ScalarAffineFunction in LessThan`, the model
+Given an optimizer `optimizer` implementing `ScalarAffineFunction`-in-`GreaterThan` and `ScalarAffineFunction`-in-`LessThan`, the optimizer
 ```
 bridgedmodel = SplitInterval(model)
 ```
-will additionally support `ScalarAffineFunction in Interval`
+will additionally support `ScalarAffineFunction`-in-`Interval`.
 """
 macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
     bridgedmodelname = Symbol(string(modelname) * "Instance")
@@ -171,11 +171,11 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function $MOI.$f(b::$modelname, attr::$MOIU.InstanceConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
+            function $MOI.$f(b::$modelname, attr::$MOIB.InstanceConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
                 $MOI.$f(b.bridged, attr, ci)
             end
-            function $MOI.$f(b::$modelname, attr::$MOIU.SolverConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
-                $MOI.$f(b.model, attr, $MOIU.bridge(b, ci))
+            function $MOI.$f(b::$modelname, attr::$MOIB.SolverConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
+                $MOI.$f(b.model, attr, $MOIB.bridge(b, ci))
             end
         end
     end
@@ -184,11 +184,11 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function $MOI.$f(b::$modelname, attr::$MOIU.InstanceConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
+            function $MOI.$f(b::$modelname, attr::$MOIB.InstanceConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
                 $MOI.$f(b.bridged, attr, ci)
             end
-            function $MOI.$f(b::$modelname, attr::$MOIU.SolverConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
-                $MOI.$f(b.model, attr, $MOIU.bridge(b, ci))
+            function $MOI.$f(b::$modelname, attr::$MOIB.SolverConstraintAttribute, ci::$CI{<:$bridgedfuns, <:$bridgedsets})
+                $MOI.$f(b.model, attr, $MOIB.bridge(b, ci))
             end
         end
     end
@@ -196,7 +196,7 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
     esc(quote
         $MOIU.@model $bridgedmodelname $ss $sst $vs $vst $sf $sft $vf $vft
 
-        struct $modelname{T, IT<:$MOI.ModelLike} <: $MOIU.AbstractBridgeOptimizer
+        struct $modelname{T, IT<:$MOI.ModelLike} <: $MOIB.AbstractBridgeOptimizer
             model::IT
             bridged::$bridgedmodelname{T}
             bridges::Dict{Int64, $bridge{T}}
@@ -206,12 +206,12 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         end
 
         # References
-        $MOI.candelete(b::$modelname{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.candelete(b.bridged, ci) && $MOI.candelete(b.model, $MOIU.bridge(b, ci))
+        $MOI.candelete(b::$modelname{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.candelete(b.bridged, ci) && $MOI.candelete(b.model, $MOIB.bridge(b, ci))
 
         $MOI.isvalid(b::$modelname{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T = $MOI.isvalid(b.bridged, ci)
 
         function $MOI.delete!(b::$modelname{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T
-            $MOI.delete!(b.model, $MOIU.bridge(b, ci))
+            $MOI.delete!(b.model, $MOIB.bridge(b, ci))
             delete!(b.model, ci.value)
             $MOI.delete!(b.bridged, ci)
         end
@@ -227,10 +227,10 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
             ci
         end
         function $MOI.canmodifyconstraint(b::$modelname, ci::$CI{<:$bridgedfuns, <:$bridgedsets}, change)
-            $MOI.canmodifyconstraint(b.bridged, ci, change) && $MOI.canmodifyconstraint(b.model, $MOIU.bridge(b, ci), change)
+            $MOI.canmodifyconstraint(b.bridged, ci, change) && $MOI.canmodifyconstraint(b.model, $MOIB.bridge(b, ci), change)
         end
         function $MOI.modifyconstraint!(b::$modelname, ci::$CI{<:$bridgedfuns, <:$bridgedsets}, change)
-            $MOI.modifyconstraint!(b.model, $MOIU.bridge(b, ci), change)
+            $MOI.modifyconstraint!(b.model, $MOIB.bridge(b, ci), change)
             $MOI.modifyconstraint!(b.bridged, ci, change)
         end
     end)
