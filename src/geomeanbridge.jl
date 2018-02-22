@@ -108,6 +108,7 @@ end
 MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintPrimal, c::GeoMeanBridge) = true
 function _getconstrattr(model, a, c::GeoMeanBridge{T}) where T
     output = Vector{T}(c.d)
+    output[1] = MOI.get(model, a, c.tubc)
     N = length(c.xij)+1
     offset = div(N, 2) - 1 # 1 + 2 + ... + n/4
     for i in 1:(c.d-1)

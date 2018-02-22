@@ -37,11 +37,16 @@ MOIB.@bridge GeoMean MOIB.GeoMeanBridge () () (GeometricMeanCone,) () () () (Vec
 MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 
 @testset "Bridge tests" begin
-    const config = MOIT.TestConfig(solve=false)
+    optimizer = MOIU.MockOptimizer(SimpleModel{Float64}())
+    config = MOIT.TestConfig()
+    optimizer.evalobjective = true
 
     @testset "GeoMeanBridge" begin
-        MOIT.geomeantest(GeoMean{Float64}(SimpleModel{Float64}()), config)
+        optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [ones(4); 2; √2; √2])
+        MOIT.geomeantest(GeoMean{Float64}(optimizer), config)
     end
+
+    config = MOIT.TestConfig(solve=false)
 
     @testset "RootDetBridge" begin
         MOIT.rootdet1tvtest(RootDet{Float64}(GeoMean{Float64}(SimpleModel{Float64}())), config)
