@@ -105,7 +105,10 @@ function MOI.delete!(model::MOI.ModelLike, c::GeoMeanBridge)
 end
 
 # Attributes, Bridge acting as a constraint
-MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintPrimal, c::GeoMeanBridge) = true
+function MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintPrimal, ::Type{GeoMeanBridge{T}}) where T
+    MOI.canget(model, a, CI{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) &&
+    MOI.canget(model, a, CI{MOI.VectorAffineFunction{T}, MOI.RotatedSecondOrderCone})
+end
 function _getconstrattr(model, a, c::GeoMeanBridge{T}) where T
     output = Vector{T}(c.d)
     output[1] = MOI.get(model, a, c.tubc)

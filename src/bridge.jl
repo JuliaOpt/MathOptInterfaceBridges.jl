@@ -171,11 +171,11 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         attributescode = quote
             $attributescode
 
-            function $MOI.$f(b::$modelname, attr::$MOIB.InstanceConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
+            function $MOI.$f(b::$modelname, attr::$MOIB.InstanceConstraintAttribute, ci::Type{$CI{F, S}}) where {F<:$bridgedfuns, S<:$bridgedsets}
                 $MOI.$f(b.bridged, attr, ci)
             end
-            function $MOI.$f(b::$modelname, attr::$MOIB.SolverConstraintAttribute, ci::Type{$CI{<:$bridgedfuns, <:$bridgedsets}})
-                $MOI.$f(b.model, attr, $MOIB.bridge(b, ci))
+            function $MOI.$f(b::$modelname{T}, attr::$MOIB.SolverConstraintAttribute, ci::Type{$CI{F, S}}) where {T, F<:$bridgedfuns, S<:$bridgedsets}
+                $MOI.$f(b.model, attr, $bridge{T})
             end
         end
     end
