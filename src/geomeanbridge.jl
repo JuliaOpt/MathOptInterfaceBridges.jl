@@ -99,9 +99,10 @@ MOI.get(b::GeoMeanBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunct
 
 # References
 function MOI.delete!(model::MOI.ModelLike, c::GeoMeanBridge)
-    MOI.delete!(model, c.xij)
+    # TODO delete!. -> delete! when https://github.com/JuliaOpt/MathOptInterface.jl/pull/257 is merged
+    MOI.delete!.(model, c.xij)
     MOI.delete!(model, c.tubc)
-    MOI.delete!(model, c.socrc)
+    MOI.delete!.(model, c.socrc)
 end
 
 # Attributes, Bridge acting as a constraint
