@@ -212,7 +212,7 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
 
         function $MOI.delete!(b::$modelname{T}, ci::$CI{<:$bridgedfuns, <:$bridgedsets}) where T
             $MOI.delete!(b.model, $MOIB.bridge(b, ci))
-            delete!(b.model, ci.value)
+            delete!(b.bridges, ci.value)
             $MOI.delete!(b.bridged, ci)
         end
 

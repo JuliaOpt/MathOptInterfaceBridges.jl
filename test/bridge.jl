@@ -43,7 +43,25 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
 
     @testset "GeoMeanBridge" begin
         optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [ones(4); 2; √2; √2])
-        MOIT.geomeantest(GeoMean{Float64}(optimizer), config)
+        bridgedoptimizer = GeoMean{Float64}(optimizer)
+        MOIT.geomean1vtest(bridgedoptimizer, config)
+        MOIT.geomean1ftest(bridgedoptimizer, config)
+        # Test deletion
+        ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 4
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()) == 1
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}()) == 1
+        MOI.delete!(bridgedoptimizer, ci)
+        @test isempty(bridgedoptimizer.bridges)
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()))
+        # As the bridge has been removed, if the constraints it has created where not removed, it wouldn't be there to decrease this counter anymore
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 4
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}()) == 1
     end
 
     config = MOIT.TestConfig(solve=false)
