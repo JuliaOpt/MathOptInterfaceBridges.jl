@@ -78,12 +78,14 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         MOIT.soc1vtest(bridgedoptimizer, config)
         MOIT.soc1ftest(bridgedoptimizer, config)
         ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 3
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()) == 1
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
         @test MOI.isvalid(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
         @test !MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 3
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()) == 0
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
@@ -99,12 +101,14 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
                               (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
         MOIT.rotatedsoc1ftest(bridgedoptimizer, config)
         ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 2
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 1
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
         @test MOI.isvalid(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
         @test !MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 2
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
