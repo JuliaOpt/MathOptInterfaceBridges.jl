@@ -34,6 +34,8 @@ MOIB.@bridge SplitInterval MOIB.SplitIntervalBridge () (Interval,) () () () (Sca
 end
 
 MOIB.@bridge GeoMean MOIB.GeoMeanBridge () () (GeometricMeanCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
+MOIB.@bridge SOCtoPSD MOIB.SOCtoPSDCBridge () () (SecondOrderCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
+MOIB.@bridge RSOCtoPSD MOIB.RSOCtoPSDCBridge () () (RotatedSecondOrderCone,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (VectorOfVariables,) (VectorAffineFunction,)
 
 @testset "Bridge tests" begin
@@ -62,6 +64,24 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}()) == 1
+    end
+
+    @testset "SOCtoPSDBridge" begin
+        optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1.0, 1/√2, 1/√2],
+                              (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2/2, -1/2, √2/4, -1/2, √2/4, √2/4]],
+                              (MOI.VectorAffineFunction{Float64}, MOI.Zeros)                            => [[-√2]])
+        MOIT.soc1vtest(SOCtoPSD{Float64}(optimizer), config)
+        MOIT.soc1ftest(SOCtoPSD{Float64}(optimizer), config)
+    end
+
+    @testset "RSOCtoPSDBridge" begin
+        optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1/√2, 1/√2, 0.5, 1.0],
+                              (MOI.SingleVariable,                MOI.EqualTo{Float64})       => [-√2, -1/√2],
+                              (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
+        MOIT.rotatedsoc1vtest(RSOCtoPSD{Float64}(optimizer), config)
+        optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1/√2, 1/√2],
+                              (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
+        MOIT.rotatedsoc1ftest(RSOCtoPSD{Float64}(optimizer), config)
     end
 
     config = MOIT.TestConfig(solve=false)

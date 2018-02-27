@@ -24,12 +24,17 @@ function MOI.delete!(model::MOI.ModelLike, c::SplitIntervalBridge)
 end
 
 # Attributes, Bridge acting as a constraint
-MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintPrimal, c::SplitIntervalBridge) = true
+function MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintPrimal, ::Type{SplitIntervalBridge{T}}) where T
+    MOI.canget(model, a, CI{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}})
+end
 function MOI.get(model::MOI.ModelLike, a::MOI.ConstraintPrimal, c::SplitIntervalBridge)
     # lower and upper should give the same value
     MOI.get(model, MOI.ConstraintPrimal(), c.lower)
 end
-MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintDual, c::SplitIntervalBridge) = true
+function MOI.canget(model::MOI.ModelLike, a::MOI.ConstraintDual, ::Type{SplitIntervalBridge{T}}) where T
+    MOI.canget(model, a, CI{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}) &&
+    MOI.canget(model, a, CI{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}})
+end
 function MOI.get(model::MOI.ModelLike, a::MOI.ConstraintDual, c::SplitIntervalBridge)
     lowd = MOI.get(model, MOI.ConstraintDual(), c.lower) # Should be nonnegative
     uppd = MOI.get(model, MOI.ConstraintDual(), c.upper) # Should be nonpositive
