@@ -3,11 +3,6 @@ function tofun(f::MOI.VectorOfVariables)
     MOI.VectorAffineFunction(collect(1:nv), f.variables, ones(nv), zeros(nv))
 end
 
-function trimap(i, j)
-    @assert j <= i
-    div((i-1)*i, 2) + j
-end
-
 """
     _SOCtoPSDCaff{T}(f::MOI.VectorAffineFunction{T}, g::MOI.ScalarAffineFunction{T})
 
@@ -47,7 +42,7 @@ end
 # which is equivalent to
 # t > 0
 # t^2 > x' * x
-struct SOCtoPSDCBridge{T}
+struct SOCtoPSDCBridge{T} <: AbstractBridge
     dim::Int
     cr::CI{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}
 end
@@ -56,8 +51,6 @@ function SOCtoPSDCBridge{T}(instance, f, s::MOI.SecondOrderCone) where T
     cr = MOI.addconstraint!(instance, _SOCtoPSDCaff(f), MOI.PositiveSemidefiniteConeTriangle(d))
     SOCtoPSDCBridge(d, cr)
 end
-MOI.get(::SOCtoPSDCBridge, ::MOI.NumberOfConstraints) = 0
-MOI.get(::SOCtoPSDCBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = 1
 
 _SOCtoPSDCaff(f::MOI.VectorOfVariables) = _SOCtoPSDCaff(tofun(f))
 _SOCtoPSDCaff(f::MOI.VectorAffineFunction) = _SOCtoPSDCaff(f, MOIU.eachscalar(f)[1])
@@ -74,6 +67,13 @@ function MOI.get(instance::MOI.AbstractOptimizer, a::MOI.ConstraintDual, c::SOCt
     [tdual; dual[trimap.(2:c.dim, 1)]*2]
 end
 
+MOI.get(::SOCtoPSDCBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = 1
+MOI.get(b::SOCtoPSDCBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = [b.cr]
+
+function MOI.delete!(instance::MOI.AbstractOptimizer, c::SOCtoPSDCBridge)
+    MOI.delete!(instance, c.cr)
+end
+
 # (t, u, x) is transformed into the matrix
 # [t   x']
 # [x 2u*I]
@@ -83,7 +83,7 @@ end
 # which is equivalent to
 # u > 0
 # 2t*u > x' * x
-struct RSOCtoPSDCBridge{T}
+struct RSOCtoPSDCBridge{T} <: AbstractBridge
     dim::Int
     cr::CI{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}
 end
@@ -92,8 +92,6 @@ function RSOCtoPSDCBridge{T}(instance, f, s::MOI.RotatedSecondOrderCone) where T
     cr = MOI.addconstraint!(instance, _RSOCtoPSDCaff(f), MOI.PositiveSemidefiniteConeTriangle(d))
     RSOCtoPSDCBridge(d, cr)
 end
-MOI.get(::RSOCtoPSDCBridge, ::MOI.NumberOfConstraints) = 0
-MOI.get(::RSOCtoPSDCBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = 1
 
 _RSOCtoPSDCaff(f::MOI.VectorOfVariables) = _RSOCtoPSDCaff(tofun(f))
 function _RSOCtoPSDCaff(f::MOI.VectorAffineFunction)
@@ -111,13 +109,15 @@ function MOI.get(instance::MOI.AbstractOptimizer, a::MOI.ConstraintPrimal, c::RS
     x[2] /= 2 # It is (2u*I)[1,1] so it needs to be divided by 2 to get u
     x
 end
-MOI.canget(instance::MOI.AbstractOptimizer, a::MOI.ConstraintDual, c::RSOCtoPSDCBridge) = true
 function MOI.get(instance::MOI.AbstractOptimizer, a::MOI.ConstraintDual, c::RSOCtoPSDCBridge)
     dual = MOI.get(instance, MOI.ConstraintDual(), c.cr)
     udual = sum(i -> dual[trimap(i, i)], 2:c.dim)
     [dual[1]; 2udual; dual[trimap.(2:c.dim, 1)]*2]
 end
 
-function MOI.delete!(instance::MOI.AbstractOptimizer, c::SOCtoPSDCBridge, RSOCtoPSDCBridge)
+MOI.get(::RSOCtoPSDCBridge{T}, ::MOI.NumberOfConstraints{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = 1
+MOI.get(b::RSOCtoPSDCBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle}) where T = [b.cr]
+
+function MOI.delete!(instance::MOI.AbstractOptimizer, c::RSOCtoPSDCBridge)
     MOI.delete!(instance, c.cr)
 end

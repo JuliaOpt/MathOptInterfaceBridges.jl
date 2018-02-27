@@ -46,16 +46,20 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
     @testset "GeoMeanBridge" begin
         optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [ones(4); 2; √2; √2])
         bridgedoptimizer = GeoMean{Float64}(optimizer)
+        @test !MOI.canget(bridgedoptimizer, MOI.ConstraintDual(), MOI.ConstraintIndex{MOI.VectorOfVariables, MOI.GeometricMeanCone})
         MOIT.geomean1vtest(bridgedoptimizer, config)
         MOIT.geomean1ftest(bridgedoptimizer, config)
-        # Test deletion
         ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()))
+        @test !MOI.canmodifyconstraint(bridgedoptimizer, ci, MOI.VectorOfVariables)
+        # Test deletion
         @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 4
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()) == 1
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}()) == 1
+        @test MOI.isvalid(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
+        @test !MOI.isvalid(bridgedoptimizer, ci)
         @test isempty(bridgedoptimizer.bridges)
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()))
@@ -67,21 +71,43 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
     end
 
     @testset "SOCtoPSDBridge" begin
+        bridgedoptimizer = SOCtoPSD{Float64}(optimizer)
         optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1.0, 1/√2, 1/√2],
                               (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2/2, -1/2, √2/4, -1/2, √2/4, √2/4]],
                               (MOI.VectorAffineFunction{Float64}, MOI.Zeros)                            => [[-√2]])
-        MOIT.soc1vtest(SOCtoPSD{Float64}(optimizer), config)
-        MOIT.soc1ftest(SOCtoPSD{Float64}(optimizer), config)
+        MOIT.soc1vtest(bridgedoptimizer, config)
+        MOIT.soc1ftest(bridgedoptimizer, config)
+        ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()) == 1
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
+        @test MOI.isvalid(bridgedoptimizer, ci)
+        MOI.delete!(bridgedoptimizer, ci)
+        @test !MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()) == 0
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
     end
 
     @testset "RSOCtoPSDBridge" begin
+        bridgedoptimizer = RSOCtoPSD{Float64}(optimizer)
         optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1/√2, 1/√2, 0.5, 1.0],
                               (MOI.SingleVariable,                MOI.EqualTo{Float64})       => [-√2, -1/√2],
                               (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
-        MOIT.rotatedsoc1vtest(RSOCtoPSD{Float64}(optimizer), config)
+        MOIT.rotatedsoc1vtest(bridgedoptimizer, config)
         optimizer.optimize! = (optimizer::MOIU.MockOptimizer) -> MOIU.mock_optimize!(optimizer, [1/√2, 1/√2],
                               (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
-        MOIT.rotatedsoc1ftest(RSOCtoPSD{Float64}(optimizer), config)
+        MOIT.rotatedsoc1ftest(bridgedoptimizer, config)
+        ci = first(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 1
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
+        @test MOI.isvalid(bridgedoptimizer, ci)
+        MOI.delete!(bridgedoptimizer, ci)
+        @test !MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()) == 0
+        @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
+        @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
     end
 
     config = MOIT.TestConfig(solve=false)
