@@ -22,6 +22,6 @@ include("bridge.jl")
 include("intervalbridge.jl")
 include("geomeanbridge.jl")
 include("detbridge.jl")
-include("soctosdpbridge.jl")
+include("soctopsdbridge.jl")
 
 end # module
