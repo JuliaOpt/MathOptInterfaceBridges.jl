@@ -58,6 +58,7 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}()) == 1
         @test MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.candelete(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
         @test !MOI.isvalid(bridgedoptimizer, ci)
         @test isempty(bridgedoptimizer.bridges)
@@ -83,6 +84,7 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
         @test MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.candelete(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
         @test !MOI.isvalid(bridgedoptimizer, ci)
         @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 3
@@ -106,6 +108,7 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         @test MOI.get(bridgedoptimizer, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()) == 0
         @test isempty(MOI.get(bridgedoptimizer, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle}()))
         @test MOI.isvalid(bridgedoptimizer, ci)
+        @test MOI.candelete(bridgedoptimizer, ci)
         MOI.delete!(bridgedoptimizer, ci)
         @test !MOI.isvalid(bridgedoptimizer, ci)
         @test MOI.get(bridgedoptimizer, MOI.NumberOfVariables()) == 2
