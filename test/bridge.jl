@@ -61,6 +61,10 @@ end
         bridgedmock = SplitInterval{Float64}(mock)
         MOIT.linear10test(bridgedmock, config)
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Float64}, MOI.Interval{Float64}}()))
+        @test MOI.canmodifyconstraint(bridgedmock, ci, MOI.ScalarAffineFunction{Float64})
+        newf = MOI.ScalarAffineFunction(MOI.get(bridgedmock, MOI.ListOfVariableIndices()), [1., -1.], 0.)
+        MOI.modifyconstraint!(bridgedmock, ci, newf)
+        @test MOI.get(bridgedmock, MOI.ConstraintFunction(), ci) ≈ newf
         # Test deletion
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 2
         test_noc(bridgedmock, MOI.ScalarAffineFunction{Float64}, MOI.GreaterThan{Float64}, 0)
