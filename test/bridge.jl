@@ -92,6 +92,7 @@ MOIB.@bridge RootDet MOIB.RootDetBridge () () (RootDetConeTriangle,) () () () (V
         @test MOI.canmodifyconstraint(bridgedmock, ci, MOI.ScalarAffineFunction{Float64})
         newf = MOI.ScalarAffineFunction(MOI.get(bridgedmock, MOI.ListOfVariableIndices()), [1., -1.], 0.)
         MOI.modifyconstraint!(bridgedmock, ci, newf)
+        @test MOI.canget(bridgedmock, MOI.ConstraintFunction(), typeof(ci))
         @test MOI.get(bridgedmock, MOI.ConstraintFunction(), ci) ≈ newf
         # Test deletion
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 2
