@@ -88,7 +88,7 @@ end
         MOIT.geomean1ftest(bridgedmock, config)
         @test !MOI.canget(bridgedmock, MOI.ConstraintDual(), MOI.ConstraintIndex{MOI.VectorOfVariables, MOI.GeometricMeanCone})
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone}()))
-        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorOfVariables)
+        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorAffineFunction{Float64})
         # Test deletion
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 4
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.GeometricMeanCone,      1)
@@ -114,6 +114,7 @@ end
         MOIT.soc1vtest(bridgedmock, config)
         MOIT.soc1ftest(bridgedmock, config)
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone}()))
+        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorAffineFunction{Float64})
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 3
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.SecondOrderCone, 1)
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle, 0)
@@ -137,6 +138,7 @@ end
                               (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
         MOIT.rotatedsoc1ftest(bridgedmock, config)
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone}()))
+        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorAffineFunction{Float64})
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 2
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone, 1)
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle, 0)
@@ -157,6 +159,7 @@ end
         MOIT.logdet1tftest(bridgedmock, config)
         @test !MOI.canget(bridgedmock, MOI.ConstraintDual(), MOI.ConstraintIndex{MOI.VectorAffineFunction{Float64}, MOI.LogDetConeTriangle})
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.LogDetConeTriangle}()))
+        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorAffineFunction{Float64})
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 4
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.LogDetConeTriangle, 1)
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.ExponentialCone, 0)
@@ -179,6 +182,7 @@ end
         MOIT.rootdet1tftest(bridgedmock, config)
         @test !MOI.canget(bridgedmock, MOI.ConstraintDual(), MOI.ConstraintIndex{MOI.VectorAffineFunction{Float64}, MOI.RootDetConeTriangle})
         ci = first(MOI.get(bridgedmock, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64}, MOI.RootDetConeTriangle}()))
+        @test !MOI.canmodifyconstraint(bridgedmock, ci, MOI.VectorAffineFunction{Float64})
         @test MOI.get(bridgedmock, MOI.NumberOfVariables()) == 4
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.RootDetConeTriangle, 1)
         test_noc(bridgedmock, MOI.VectorAffineFunction{Float64}, MOI.RotatedSecondOrderCone, 0)

@@ -74,6 +74,8 @@ function MOI.delete!(instance::MOI.AbstractOptimizer, c::SOCtoPSDCBridge)
     MOI.delete!(instance, c.cr)
 end
 
+MOI.canmodifyconstraint(::MOI.AbstractOptimizer, ::SOCtoPSDCBridge, change) = false
+
 # (t, u, x) is transformed into the matrix
 # [t   x']
 # [x 2u*I]
@@ -121,3 +123,5 @@ MOI.get(b::RSOCtoPSDCBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFu
 function MOI.delete!(instance::MOI.AbstractOptimizer, c::RSOCtoPSDCBridge)
     MOI.delete!(instance, c.cr)
 end
+
+MOI.canmodifyconstraint(::MOI.AbstractOptimizer, ::RSOCtoPSDCBridge, change) = false
