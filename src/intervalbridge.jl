@@ -17,7 +17,7 @@ MOI.get(b::SplitIntervalBridge{T}, ::MOI.NumberOfConstraints{MOI.ScalarAffineFun
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{T}, MOI.GreaterThan{T}}) where {T} = [b.lower]
 MOI.get(b::SplitIntervalBridge{T}, ::MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{T}, MOI.LessThan{T}}) where {T} = [b.upper]
 
-# References
+# Indices
 function MOI.delete!(model::MOI.ModelLike, c::SplitIntervalBridge)
     MOI.delete!(model, c.lower)
     MOI.delete!(model, c.upper)

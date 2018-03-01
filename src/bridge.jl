@@ -50,18 +50,12 @@ function MOI.empty!(b::AbstractBridgeOptimizer)
     MOI.empty!(b.bridged)
     empty!(b.bridges)
 end
-function MOI.copy!(b::AbstractBridgeOptimizer, src::MOI.ModelLike)
-    if needsallocateload(b.model)
-        allocateload!(b, src)
-    else
-        defaultcopy!(b, src)
-    end
-end
+MOI.copy!(b::AbstractBridgeOptimizer, src::MOI.ModelLike) = MOIU.defaultcopy!(b, src)
 
 # References
-MOI.candelete(b::AbstractBridgeOptimizer, r::MOI.Index) = MOI.candelete(b.model, r)
-MOI.isvalid(b::AbstractBridgeOptimizer, r::MOI.Index) = MOI.isvalid(b.model, r)
-MOI.delete!(b::AbstractBridgeOptimizer, r::MOI.Index) = MOI.delete!(b.model, r)
+MOI.candelete(b::AbstractBridgeOptimizer, idx::MOI.Index) = MOI.candelete(b.model, idx)
+MOI.isvalid(b::AbstractBridgeOptimizer, idx::MOI.Index) = MOI.isvalid(b.model, idx)
+MOI.delete!(b::AbstractBridgeOptimizer, idx::MOI.Index) = MOI.delete!(b.model, idx)
 
 # Attributes
 function MOI.get(b::AbstractBridgeOptimizer, loc::MOI.ListOfConstraintIndices)
