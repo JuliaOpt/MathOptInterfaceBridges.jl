@@ -119,12 +119,11 @@ MOI.get(b::LogDetBridge{T}, ::MOI.ListOfConstraintIndices{MOI.ScalarAffineFuncti
 
 # References
 function MOI.delete!(model::MOI.ModelLike, c::LogDetBridge)
-    # TODO delete!. -> delete! when https://github.com/JuliaOpt/MathOptInterface.jl/pull/257 is merged
     MOI.delete!(model, c.tlindex)
-    MOI.delete!.(model, c.lcindex)
+    MOI.delete!(model, c.lcindex)
     MOI.delete!(model, c.sdindex)
-    MOI.delete!.(model, c.l)
-    MOI.delete!.(model, c.Δ)
+    MOI.delete!(model, c.l)
+    MOI.delete!(model, c.Δ)
 end
 
 # Attributes, Bridge acting as a constraint
@@ -188,10 +187,9 @@ MOI.get(b::RootDetBridge{T}, ::MOI.ListOfConstraintIndices{MOI.VectorAffineFunct
 
 # References
 function MOI.delete!(model::MOI.ModelLike, c::RootDetBridge)
-    # TODO delete!. -> delete! when https://github.com/JuliaOpt/MathOptInterface.jl/pull/257 is merged
     MOI.delete!(model, c.gmindex)
     MOI.delete!(model, c.sdindex)
-    MOI.delete!.(model, c.Δ)
+    MOI.delete!(model, c.Δ)
 end
 
 # Attributes, Bridge acting as a constraint

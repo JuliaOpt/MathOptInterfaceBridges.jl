@@ -50,6 +50,7 @@ function MOI.empty!(b::AbstractBridgeOptimizer)
     MOI.empty!(b.bridged)
     empty!(b.bridges)
 end
+MOI.supports(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractModelAttribute, MOI.AbstractOptimizerAttribute}) = MOI.supports(b.model, attr)
 MOI.copy!(b::AbstractBridgeOptimizer, src::MOI.ModelLike) = MOIU.defaultcopy!(b, src)
 
 # References
@@ -105,6 +106,7 @@ for f in (:set!, :get, :get!)
 end
 
 # Constraints
+MOI.supportsconstraint(b::AbstractBridgeOptimizer, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet} = MOI.supportsconstraint(b.model, F, S)
 MOI.canaddconstraint(b::AbstractBridgeOptimizer, ::Type{F}, ::Type{S}) where {F<:MOI.AbstractFunction, S<:MOI.AbstractSet} = MOI.canaddconstraint(b.model, F, S)
 function MOI.addconstraint!(b::AbstractBridgeOptimizer, f::MOI.AbstractFunction, s::MOI.AbstractSet)
     MOI.addconstraint!(b.model, f, s)
@@ -213,6 +215,7 @@ macro bridge(modelname, bridge, ss, sst, vs, vst, sf, sft, vf, vft)
         $attributescode
 
         # Constraints
+        $MOI.supportsconstraint(b::$modelname, ::Type{F}, ::Type{S}) where {F<:$bridgedfuns, S<:$bridgedsets} = $MOI.supportsconstraint(b.bridged, F, S)
         $MOI.canaddconstraint(b::$modelname, ::Type{F}, ::Type{S}) where {F<:$bridgedfuns, S<:$bridgedsets} = $MOI.canaddconstraint(b.bridged, F, S)
         function $MOI.addconstraint!(b::$modelname{T}, f::$bridgedfuns, s::$bridgedsets) where T
             ci = $MOI.addconstraint!(b.bridged, f, s)
