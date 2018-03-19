@@ -21,6 +21,10 @@ end
 @testset "BridgeOptimizer" begin
     const model = SplitInterval{Int}(SimpleModel{Int}())
 
+    @testset "Name test" begin
+        MOIT.nametest(SplitInterval{Float64}(SimpleModel{Float64}()))
+    end
+
     @testset "Custom test" begin
         x, y = MOI.addvariables!(model, 2)
         @test MOI.get(model, MOI.NumberOfVariables()) == 2
