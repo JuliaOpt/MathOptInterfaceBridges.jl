@@ -51,7 +51,7 @@ function MOI.empty!(b::AbstractBridgeOptimizer)
     empty!(b.bridges)
 end
 MOI.supports(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractModelAttribute, MOI.AbstractOptimizerAttribute}) = MOI.supports(b.model, attr)
-MOI.copy!(b::AbstractBridgeOptimizer, src::MOI.ModelLike) = MOIU.defaultcopy!(b, src)
+MOI.copy!(b::AbstractBridgeOptimizer, src::MOI.ModelLike; copynames=false) = MOIU.defaultcopy!(b, src, copynames)
 
 # References
 MOI.candelete(b::AbstractBridgeOptimizer, idx::MOI.Index) = MOI.candelete(b.model, idx)
@@ -86,13 +86,13 @@ function MOI.get(b::AbstractBridgeOptimizer, attr::MOI.ListOfConstraints)
     deleteat!(loc, rm)
     append!(loc, MOI.get(b.bridged, attr))
 end
-for f in (:canget, :canset, :set!, :get, :get!)
+for f in (:canget, :canset, :get, :get!)
     @eval begin
         MOI.$f(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractModelAttribute, MOI.AbstractOptimizerAttribute}) = MOI.$f(b.model, attr)
-        # Objective function
-        MOI.$f(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractModelAttribute, MOI.AbstractOptimizerAttribute}, arg::Union{MOI.OptimizationSense, MOI.AbstractScalarFunction}) = MOI.$f(b.model, attr, arg)
     end
 end
+# Objective function and model name
+MOI.set!(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractModelAttribute, MOI.AbstractOptimizerAttribute}, value) = MOI.set!(b.model, attr, value)
 for f in (:canget, :canset)
     @eval begin
         MOI.$f(b::AbstractBridgeOptimizer, attr::Union{MOI.AbstractVariableAttribute, MOI.AbstractConstraintAttribute}, index::Type{<:MOI.Index}) = MOI.$f(b.model, attr, index)
